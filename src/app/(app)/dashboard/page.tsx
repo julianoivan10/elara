@@ -104,7 +104,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-10 lg:grid-cols-12 lg:gap-x-12">
         {/* ------------------------------------------------------- main */}
-        <div className="flex flex-col gap-12 lg:col-span-7 xl:col-span-8">
+        <div className="flex min-w-0 flex-col gap-12 lg:col-span-7 xl:col-span-8">
           <CompletionPanel completion={completion} />
 
           {/* ------------------------------------------- pipeline */}
@@ -230,7 +230,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* ------------------------------------------------------ aside */}
-        <div className="flex flex-col gap-10 lg:col-span-5 xl:col-span-4">
+        <div className="flex min-w-0 flex-col gap-10 lg:col-span-5 xl:col-span-4">
           {/* ------------------------------------------- resumes */}
           <section className="flex flex-col gap-4">
             <div className="flex items-baseline justify-between gap-4 border-b border-rule pb-2.5">

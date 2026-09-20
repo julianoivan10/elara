@@ -64,8 +64,11 @@ export function ResumeCard({ resume }: { resume: ResumeCardData }) {
       }
     });
 
+  // min-w-0: as a grid item the card defaults to min-width:auto, which floors
+  // the grid track at the preview sheet's intrinsic 794px and pushes the column
+  // off the side of a phone screen.
   return (
-    <article className="group flex flex-col">
+    <article className="group flex min-w-0 flex-col">
       <Link
         href={`/resume/${resume.id}`}
         className="relative block overflow-hidden rounded-md border border-rule bg-raised/50 p-4 transition-colors duration-200 hover:border-ink-ghost"

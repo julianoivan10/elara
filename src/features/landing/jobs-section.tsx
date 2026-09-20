@@ -56,7 +56,7 @@ export function JobsSection() {
 
         <div className="mt-12 grid gap-10 lg:grid-cols-12 lg:gap-12">
           {/* --------------------------------------------------- listings */}
-          <div className="lg:col-span-6">
+          <div className="min-w-0 lg:col-span-6">
             <span className="eyebrow">Discovery</span>
             <ul className="mt-4 flex flex-col">
               {demoJobs.map((job) => (
@@ -119,7 +119,7 @@ export function JobsSection() {
           </div>
 
           {/* ----------------------------------------------------- board */}
-          <div className="lg:col-span-6">
+          <div className="min-w-0 lg:col-span-6">
             <span className="eyebrow">Applications</span>
 
             <div className="scrollbar-none mt-4 -mx-1 flex gap-3 overflow-x-auto px-1 pb-1">

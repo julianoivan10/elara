@@ -37,7 +37,7 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-rule">
       <div className="gutter mx-auto max-w-[90rem] py-14">
         <div className="grid gap-10 md:grid-cols-12">
-          <div className="md:col-span-5">
+          <div className="min-w-0 md:col-span-5">
             <Wordmark />
             <p className="mt-4 max-w-[34ch] text-[0.8125rem] leading-relaxed text-ink-muted">
               {site.description}
@@ -46,7 +46,7 @@ export function SiteFooter() {
 
           <nav
             aria-label="Footer"
-            className="grid grid-cols-2 gap-8 md:col-span-7 sm:grid-cols-3"
+            className="grid min-w-0 grid-cols-2 gap-8 md:col-span-7 sm:grid-cols-3"
           >
             {COLUMNS.map((column) => (
               <div key={column.label} className="flex flex-col gap-3">

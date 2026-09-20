@@ -51,7 +51,7 @@ export function ResumeShowcase() {
 
         <div className="mt-12 grid gap-10 lg:grid-cols-12 lg:gap-12">
           {/* ------------------------------------------------- controls */}
-          <div className="flex flex-col gap-8 lg:col-span-5">
+          <div className="flex min-w-0 flex-col gap-8 lg:col-span-5">
             <fieldset className="flex flex-col gap-2">
               <legend className="eyebrow mb-2">Template</legend>
               {RESUME_TEMPLATES.map((template) => {
@@ -81,11 +81,14 @@ export function ResumeShowcase() {
                     </span>
 
                     <span className="min-w-0 flex-1">
-                      <span className="flex items-baseline justify-between gap-3">
-                        <span className="text-[0.9375rem] font-medium text-ink">
+                      {/* Stacked on a phone: "best for" is a full sentence, and
+                          holding it on one line forced the row wider than the
+                          screen. It rejoins the title line from sm up. */}
+                      <span className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+                        <span className="text-[0.9375rem] font-medium text-ink sm:shrink-0">
                           {template.name}
                         </span>
-                        <span className="eyebrow shrink-0">
+                        <span className="eyebrow sm:text-right">
                           {template.bestFor}
                         </span>
                       </span>
@@ -154,7 +157,7 @@ export function ResumeShowcase() {
           </div>
 
           {/* -------------------------------------------------- preview */}
-          <div className="lg:col-span-7">
+          <div className="min-w-0 lg:col-span-7">
             <div className="mx-auto max-w-[30rem] lg:max-w-none">
               <div className="mb-3 flex items-center justify-between">
                 <span className="eyebrow">{active.name} · A4</span>

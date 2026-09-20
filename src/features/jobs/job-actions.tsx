@@ -47,8 +47,12 @@ export function JobActions({
     });
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button onClick={tailor} disabled={tailoring}>
+    // Buttons carry whitespace-nowrap, so wherever the column is narrow they
+    // cannot shrink and push past it. Stacked on a phone, inline while the
+    // page is a single wide column, stacked again from lg where this moves
+    // into the narrow sticky aside.
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap lg:flex-col">
+      <Button onClick={tailor} disabled={tailoring} className="w-full sm:w-auto lg:w-full">
         <FileText />
         {tailoring ? "Preparing…" : "Create a tailored resume"}
       </Button>
@@ -62,7 +66,7 @@ export function JobActions({
         {alreadyTracked ? "On your board" : tracking ? "Adding…" : "Track it"}
       </Button>
 
-      <Button asChild variant="ghost">
+      <Button asChild variant="ghost" className="w-full sm:w-auto lg:w-full">
         <a href={applyUrl} target="_blank" rel="noopener noreferrer">
           Apply on the company site
           <ExternalLink />

@@ -56,7 +56,7 @@ export default async function JobsPage({
 
       <div className="grid gap-10 lg:grid-cols-12 lg:gap-x-12">
         {/* ------------------------------------------------------ filters */}
-        <aside className="lg:col-span-3">
+        <aside className="min-w-0 lg:col-span-3">
           <div className="lg:sticky lg:top-8">
             <Suspense fallback={<div className="h-64" />}>
               <JobFilters skills={skills} total={total} />
@@ -65,7 +65,7 @@ export default async function JobsPage({
         </aside>
 
         {/* ------------------------------------------------------ results */}
-        <div className="lg:col-span-9">
+        <div className="min-w-0 lg:col-span-9">
           <div className="hidden items-baseline justify-between gap-4 border-b border-rule pb-2.5 lg:flex">
             <p className="text-[0.8125rem] text-ink-muted">
               <span data-numeric className="font-mono text-ink">

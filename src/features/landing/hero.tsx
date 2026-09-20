@@ -24,7 +24,7 @@ export function Hero() {
       <div className="gutter relative mx-auto max-w-[90rem] pb-16 pt-12 md:pb-24 md:pt-20 lg:pb-28 lg:pt-24">
         <div className="grid items-center gap-14 lg:grid-cols-12 lg:gap-10">
           {/* ------------------------------------------------------ type */}
-          <div className="lg:col-span-7 lg:pr-8">
+          <div className="min-w-0 lg:col-span-7 lg:pr-8">
             <p className="eyebrow flex items-center gap-2.5">
               <span
                 aria-hidden
@@ -77,7 +77,7 @@ export function Hero() {
           </div>
 
           {/* -------------------------------------------------- document */}
-          <div className="lg:col-span-5 lg:pl-4">
+          <div className="min-w-0 lg:col-span-5 lg:pl-4">
             <HeroDocument />
           </div>
         </div>

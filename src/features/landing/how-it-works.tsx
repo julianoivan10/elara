@@ -42,7 +42,7 @@ export function HowItWorks() {
         {/* --------------------------------------------------- stage list */}
         <Tabs.List
           aria-label="Workflow stages"
-          className="flex flex-col lg:col-span-5"
+          className="flex min-w-0 flex-col lg:col-span-5"
         >
           {stages.map((item) => {
             const isActive = item.key === active;
@@ -107,7 +107,7 @@ export function HowItWorks() {
         </Tabs.List>
 
         {/* ------------------------------------------------------- visual */}
-        <div className="lg:col-span-7">
+        <div className="min-w-0 lg:col-span-7">
           <div className="relative overflow-hidden rounded-lg border border-rule bg-paper">
             <div className="flex items-center justify-between border-b border-rule px-4 py-2.5">
               <span className="eyebrow">

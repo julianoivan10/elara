@@ -65,7 +65,7 @@ export default async function JobDetailPage({
 
       <div className="grid gap-10 lg:grid-cols-12 lg:gap-x-12">
         {/* ------------------------------------------------------ posting */}
-        <div className="lg:col-span-8">
+        <div className="min-w-0 lg:col-span-8">
           <header className="border-b border-ink pb-6">
             <Eyebrow>{job.company}</Eyebrow>
 
@@ -115,7 +115,7 @@ export default async function JobDetailPage({
         </div>
 
         {/* -------------------------------------------------------- aside */}
-        <aside className="lg:col-span-4">
+        <aside className="min-w-0 lg:col-span-4">
           <div className="flex flex-col gap-8 lg:sticky lg:top-8">
             <div className="flex flex-col gap-4 rounded-lg border border-rule bg-surface p-5">
               <div className="flex items-center justify-between gap-3">

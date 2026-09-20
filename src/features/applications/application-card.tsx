@@ -127,7 +127,7 @@ export function ApplicationCard({
           <select
             value={application.status}
             onChange={(event) => onStatusChange(event.target.value)}
-            className="w-full cursor-pointer appearance-none bg-transparent py-0.5 font-mono text-[0.625rem] uppercase tracking-[0.12em] text-ink-faint outline-none transition-colors hover:text-ink focus-visible:text-ink"
+            className="min-h-6 w-full cursor-pointer appearance-none bg-transparent py-1 font-mono text-[0.625rem] uppercase tracking-[0.12em] text-ink-faint outline-none transition-colors hover:text-ink focus-visible:text-ink"
           >
             {STATUS_ORDER.map((status) => (
               <option key={status} value={status}>

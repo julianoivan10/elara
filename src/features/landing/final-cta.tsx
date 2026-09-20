@@ -12,7 +12,7 @@ export function FinalCta() {
   return (
     <section className="gutter mx-auto max-w-[90rem] py-24 md:py-32">
       <div className="grid gap-10 lg:grid-cols-12">
-        <div className="lg:col-span-8">
+        <div className="min-w-0 lg:col-span-8">
           <p className="eyebrow flex items-center gap-2.5">
             <span aria-hidden className="size-1.5 rounded-full bg-lime-deep" />
             Start with one thing
@@ -42,7 +42,7 @@ export function FinalCta() {
         </div>
 
         {/* The workflow one last time, set as a numbered column. */}
-        <ol className="flex flex-col justify-end lg:col-span-4">
+        <ol className="flex min-w-0 flex-col justify-end lg:col-span-4">
           {stages.map((stage) => (
             <li
               key={stage.key}

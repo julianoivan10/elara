@@ -75,8 +75,16 @@ export function ResumePage({
   return (
     <div
       ref={containerRef}
-      className={cn("w-full", className)}
-      style={{ height: sheetHeight * effective }}
+      className={cn("w-full overflow-hidden", className)}
+      style={{
+        height: sheetHeight * effective,
+        // `transform: scale()` shrinks the sheet visually but leaves its layout
+        // box at the full 794px, which used to push the whole page sideways on
+        // a phone. `overflow-hidden` keeps that width out of the layout, and at
+        // a fixed zoom the wrapper takes the sheet's true on-screen width so a
+        // scrolling parent can still reach the rest of it.
+        width: scale !== undefined ? A4_PX.width * effective : undefined,
+      }}
     >
       <div
         className="relative origin-top-left"

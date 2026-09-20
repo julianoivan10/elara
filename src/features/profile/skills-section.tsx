@@ -168,7 +168,7 @@ function SkillChip({ skill }: { skill: Skill }) {
         onClick={remove}
         disabled={pending}
         aria-label={`Remove ${skill.name}`}
-        className="flex size-4 items-center justify-center rounded-[2px] text-ink-ghost transition-colors hover:bg-danger-tint hover:text-danger"
+        className="-my-1 flex size-6 items-center justify-center rounded-[2px] text-ink-ghost transition-colors hover:bg-danger-tint hover:text-danger"
       >
         <X className="size-3" />
       </button>
