@@ -1,0 +1,468 @@
+// ELARA — career workspace
+//
+// Data model notes:
+//  * Resume content is a *projection* of the Career Profile, not a copy. A Resume owns
+//    ordering / visibility / overrides via ResumeSection.config, while the facts live once
+//    on the Profile, so every resume stays current when the profile changes.
+//  * Templates are code (src/features/resume/templates), not rows. A ResumeTemplate table
+//    would carry no data the code registry does not already own.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------- identity
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  name            String
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  profile      Profile?
+  sessions     Session[]
+  tokens       VerificationToken[]
+  resumes      Resume[]
+  savedJobs    SavedJob[]
+  applications Application[]
+  aiUsage      AiUsage[]
+
+  @@index([createdAt])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+enum TokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+model VerificationToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  type       TokenType
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+// ---------------------------------------------------------------- career profile
+
+model Profile {
+  id       String @id @default(cuid())
+  userId   String @unique
+  fullName String
+
+  headline   String?
+  summary    String?
+  location   String?
+  phone      String?
+  website    String?
+  avatarUrl  String?
+  openToWork Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  links          Link[]
+  education      Education[]
+  experience     Experience[]
+  projects       Project[]
+  skills         Skill[]
+  certifications Certification[]
+  languages      Language[]
+  achievements   Achievement[]
+}
+
+model Link {
+  id        String @id @default(cuid())
+  profileId String
+  label     String
+  url       String
+  sortIndex Int    @default(0)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, sortIndex])
+}
+
+model Education {
+  id          String    @id @default(cuid())
+  profileId   String
+  school      String
+  degree      String?
+  field       String?
+  location    String?
+  startDate   DateTime?
+  endDate     DateTime?
+  current     Boolean   @default(false)
+  grade       String?
+  description String?
+  sortIndex   Int       @default(0)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, sortIndex])
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  FREELANCE
+  VOLUNTEER
+}
+
+enum LocationType {
+  ONSITE
+  HYBRID
+  REMOTE
+}
+
+model Experience {
+  id             String         @id @default(cuid())
+  profileId      String
+  company        String
+  role           String
+  employmentType EmploymentType @default(FULL_TIME)
+  locationType   LocationType   @default(ONSITE)
+  location       String?
+  startDate      DateTime?
+  endDate        DateTime?
+  current        Boolean        @default(false)
+  summary        String?
+  highlights     String[]
+  skills         String[]
+  sortIndex      Int            @default(0)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, sortIndex])
+}
+
+model Project {
+  id           String    @id @default(cuid())
+  profileId    String
+  name         String
+  role         String?
+  description  String?
+  highlights   String[]
+  technologies String[]
+  url          String?
+  repoUrl      String?
+  imageUrl     String?
+  startDate    DateTime?
+  endDate      DateTime?
+  current      Boolean   @default(false)
+  featured     Boolean   @default(false)
+  sortIndex    Int       @default(0)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, sortIndex])
+}
+
+enum SkillLevel {
+  FAMILIAR
+  PROFICIENT
+  ADVANCED
+  EXPERT
+}
+
+model Skill {
+  id        String     @id @default(cuid())
+  profileId String
+  name      String
+  category  String?
+  level     SkillLevel @default(PROFICIENT)
+  sortIndex Int        @default(0)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, name])
+  @@index([profileId, sortIndex])
+}
+
+model Certification {
+  id           String    @id @default(cuid())
+  profileId    String
+  name         String
+  issuer       String?
+  issueDate    DateTime?
+  expiryDate   DateTime?
+  credentialId String?
+  url          String?
+  sortIndex    Int       @default(0)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, sortIndex])
+}
+
+enum LanguageProficiency {
+  BASIC
+  CONVERSATIONAL
+  PROFESSIONAL
+  FLUENT
+  NATIVE
+}
+
+model Language {
+  id          String              @id @default(cuid())
+  profileId   String
+  name        String
+  proficiency LanguageProficiency @default(PROFESSIONAL)
+  sortIndex   Int                 @default(0)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, name])
+  @@index([profileId, sortIndex])
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  profileId   String
+  title       String
+  description String?
+  date        DateTime?
+  sortIndex   Int       @default(0)
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, sortIndex])
+}
+
+// ---------------------------------------------------------------- resumes
+
+enum ResumeSectionKind {
+  HEADER
+  SUMMARY
+  EXPERIENCE
+  EDUCATION
+  PROJECTS
+  SKILLS
+  CERTIFICATIONS
+  LANGUAGES
+  ACHIEVEMENTS
+  LINKS
+}
+
+model Resume {
+  id          String  @id @default(cuid())
+  userId      String
+  title       String
+  templateKey String  @default("editorial")
+  accentKey   String  @default("cobalt")
+  fontKey     String  @default("sans")
+  density     String  @default("regular")
+  targetJobId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetJob Job?            @relation(fields: [targetJobId], references: [id], onDelete: SetNull)
+  sections  ResumeSection[]
+
+  @@index([userId, updatedAt])
+}
+
+model ResumeSection {
+  id        String            @id @default(cuid())
+  resumeId  String
+  kind      ResumeSectionKind
+  title     String
+  visible   Boolean           @default(true)
+  sortIndex Int               @default(0)
+  /// { includedIds: string[], overrides: Record<id, Partial<item>>, extras: item[], ...opts }
+  config    Json              @default("{}")
+
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@unique([resumeId, kind])
+  @@index([resumeId, sortIndex])
+}
+
+// ---------------------------------------------------------------- jobs
+
+enum Seniority {
+  INTERNSHIP
+  ENTRY
+  MID
+  SENIOR
+  LEAD
+}
+
+enum SalaryPeriod {
+  HOUR
+  MONTH
+  YEAR
+}
+
+model Job {
+  id               String         @id @default(cuid())
+  source           String         @default("elara")
+  externalId       String?
+  title            String
+  company          String
+  companyDomain    String?
+  location         String
+  locationType     LocationType   @default(ONSITE)
+  employmentType   EmploymentType @default(FULL_TIME)
+  seniority        Seniority      @default(MID)
+  salaryMin        Int?
+  salaryMax        Int?
+  salaryCurrency   String?
+  salaryPeriod     SalaryPeriod?
+  summary          String
+  description      String
+  requirements     String[]
+  responsibilities String[]
+  skills           String[]
+  benefits         String[]
+  applyUrl         String
+  postedAt         DateTime       @default(now())
+  expiresAt        DateTime?
+  isDemo           Boolean        @default(true)
+
+  savedBy      SavedJob[]
+  applications Application[]
+  resumes      Resume[]
+
+  @@unique([source, externalId])
+  @@index([postedAt])
+  @@index([locationType, employmentType])
+}
+
+model SavedJob {
+  id        String   @id @default(cuid())
+  userId    String
+  jobId     String
+  note      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId, createdAt])
+}
+
+// ---------------------------------------------------------------- applications
+
+enum ApplicationStatus {
+  SAVED
+  APPLIED
+  SCREENING
+  INTERVIEW
+  ASSESSMENT
+  OFFER
+  REJECTED
+}
+
+model Application {
+  id       String            @id @default(cuid())
+  userId   String
+  jobId    String?
+  company  String
+  role     String
+  location String?
+  url      String?
+  source   String?
+  status   ApplicationStatus @default(SAVED)
+
+  appliedAt      DateTime?
+  nextEventAt    DateTime?
+  nextEventLabel String?
+  sortIndex      Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job    Job?               @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  notes  ApplicationNote[]
+  events ApplicationEvent[]
+
+  @@index([userId, status, sortIndex])
+  @@index([userId, updatedAt])
+}
+
+model ApplicationNote {
+  id            String   @id @default(cuid())
+  applicationId String
+  body          String
+  createdAt     DateTime @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt])
+}
+
+model ApplicationEvent {
+  id            String             @id @default(cuid())
+  applicationId String
+  fromStatus    ApplicationStatus?
+  toStatus      ApplicationStatus
+  createdAt     DateTime           @default(now())
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt])
+}
+
+// ---------------------------------------------------------------- ai
+
+enum AiTaskKind {
+  IMPROVE_SUMMARY
+  IMPROVE_HIGHLIGHT
+  PROJECT_DESCRIPTION
+  SUGGEST_SKILLS
+  ANALYZE_JOB
+  TAILOR_RESUME
+  PROFILE_REVIEW
+}
+
+model AiUsage {
+  id           String     @id @default(cuid())
+  userId       String
+  kind         AiTaskKind
+  model        String
+  inputTokens  Int        @default(0)
+  outputTokens Int        @default(0)
+  ok           Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}

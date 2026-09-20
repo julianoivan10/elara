@@ -1,0 +1,30 @@
+# Local development database for ELARA.
+#
+#   docker compose up -d      start
+#   docker compose down       stop (data is kept in the named volume)
+#   docker compose down -v    stop and delete the data
+#
+# Port 55432 is used on purpose so this never collides with a PostgreSQL server
+# you may already run on the default 5432.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: elara-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: elara
+      POSTGRES_PASSWORD: elara
+      POSTGRES_DB: elara
+    ports:
+      - "55432:5432"
+    volumes:
+      - elara-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U elara -d elara"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  elara-pgdata:
