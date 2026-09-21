@@ -21,19 +21,15 @@ import { createToken, hashToken, TOKEN_TTL } from "@/server/auth/tokens";
 import { LIMITS, rateLimit } from "@/server/rate-limit";
 import { clientKey } from "@/server/request";
 import { EmailService } from "@/services/email.service";
+import { logError } from "@/server/log";
 import {
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
 } from "@/lib/validation/auth";
-import {
-  fail,
-  fromZod,
-  ok,
-  unexpected,
-  type ActionState,
-} from "@/server/actions/result";
+import { fail, fromZod, ok, type ActionState } from "@/server/actions/result";
+import { unexpected } from "@/server/actions/unexpected";
 
 /* ------------------------------------------------------------------ helpers */
 
@@ -89,6 +85,9 @@ export async function registerAction(
 
   const { name, email, password } = parsed.data;
 
+  // Which step was running when something failed, for the server log.
+  let stage = "create-user";
+
   try {
     const user = await db.user.create({
       data: {
@@ -102,10 +101,18 @@ export async function registerAction(
       select: { id: true, name: true, email: true },
     });
 
-    const token = await issueToken(user.id, "EMAIL_VERIFY");
-    await EmailService.sendVerification(user.email, user.name, token);
-
+    stage = "create-session";
     await createSession(user.id);
+
+    // The account exists and the person is signed in. A confirmation email that
+    // fails to go out must not turn that into an error: they can resend it from
+    // the workspace banner.
+    try {
+      const token = await issueToken(user.id, "EMAIL_VERIFY");
+      await EmailService.sendVerification(user.email, user.name, token);
+    } catch (error) {
+      logError("registerAction", error, { stage: "send-verification" });
+    }
   } catch (error) {
     // P2002 is the unique constraint on email.
     //
@@ -121,7 +128,7 @@ export async function registerAction(
         email: "Try logging in instead.",
       });
     }
-    return unexpected(error, "registerAction");
+    return unexpected(error, "registerAction", { stage });
   }
 
   redirect("/dashboard?welcome=1");
@@ -152,6 +159,9 @@ export async function loginAction(
 
   const invalid = fail("That email and password do not match.");
 
+  // Which step was running when something failed, for the server log.
+  let stage = "find-user";
+
   try {
     const user = await db.user.findUnique({
       where: { email },
@@ -165,11 +175,13 @@ export async function loginAction(
       return invalid;
     }
 
+    stage = "verify-password";
     if (!(await verifyPassword(password, user.passwordHash))) return invalid;
 
+    stage = "create-session";
     await createSession(user.id);
   } catch (error) {
-    return unexpected(error, "loginAction");
+    return unexpected(error, "loginAction", { stage });
   }
 
   redirect("/dashboard");
@@ -217,7 +229,7 @@ export async function forgotPasswordAction(
       await EmailService.sendPasswordReset(user.email, user.name, token);
     }
   } catch (error) {
-    console.error("[forgotPasswordAction]", error);
+    logError("forgotPasswordAction", error);
   }
 
   return generic;

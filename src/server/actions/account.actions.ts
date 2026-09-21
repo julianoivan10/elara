@@ -8,12 +8,8 @@ import { db } from "@/server/db";
 import { requireUser } from "@/server/auth/guards";
 import { destroySession } from "@/server/auth/session";
 import { verifyPassword } from "@/server/auth/password";
-import {
-  fail,
-  ok,
-  unexpected,
-  type ActionState,
-} from "@/server/actions/result";
+import { fail, ok, type ActionState } from "@/server/actions/result";
+import { unexpected } from "@/server/actions/unexpected";
 
 const nameSchema = z.object({
   name: z.string().trim().min(1, "Enter your name.").max(80),

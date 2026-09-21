@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { ChevronsUpDown, LogOut, Settings, ShieldCheck } from "lucide-react";
 
@@ -23,6 +24,8 @@ export function AccountMenu({
   email: string;
   verified: boolean;
 }) {
+  const [signingOut, startSignOut] = React.useTransition();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex w-full items-center gap-2.5 rounded-md border border-transparent px-2 py-2 text-left transition-colors hover:border-rule hover:bg-surface">
@@ -64,14 +67,25 @@ export function AccountMenu({
 
         <DropdownMenuSeparator />
 
-        <form action={logoutAction}>
-          <DropdownMenuItem asChild tone="danger">
-            <button type="submit" className="w-full">
-              <LogOut />
-              Log out
-            </button>
-          </DropdownMenuItem>
-        </form>
+        {/*
+          Not a <form>: selecting an item closes the menu and unmounts its
+          content, which removed the form before its submit could fire, so
+          logging out silently did nothing. The action is called directly and
+          the menu is held open until its redirect lands.
+        */}
+        <DropdownMenuItem
+          tone="danger"
+          disabled={signingOut}
+          onSelect={(event) => {
+            event.preventDefault();
+            startSignOut(async () => {
+              await logoutAction();
+            });
+          }}
+        >
+          <LogOut />
+          {signingOut ? "Logging out…" : "Log out"}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

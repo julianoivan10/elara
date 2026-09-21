@@ -20,6 +20,8 @@ import { JobActions } from "@/features/jobs/job-actions";
 import { JobAnalysis } from "@/features/ai/job-analysis";
 
 export const dynamic = "force-dynamic";
+/** Covers the assistant's server actions on this page (see src/server/ai/gemini.ts). */
+export const maxDuration = 60;
 
 export async function generateMetadata({
   params,

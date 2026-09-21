@@ -90,7 +90,9 @@ export function EntryRow({
   return (
     <article
       className={cn(
-        "group flex items-start gap-4 border-b border-rule py-4 last:border-b-0",
+        // Narrow screens stack the controls under the entry, so four icon
+        // buttons do not squeeze the text into a column a few words wide.
+        "group flex flex-col gap-2 border-b border-rule py-4 last:border-b-0 sm:flex-row sm:items-start sm:gap-4",
         className,
       )}
     >
@@ -115,7 +117,7 @@ export function EntryRow({
       </div>
 
       {controls ? (
-        <div className="flex shrink-0 items-center gap-0.5 opacity-100 transition-opacity duration-150 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
+        <div className="-ml-2 flex shrink-0 items-center gap-0.5 opacity-100 sm:ml-0 transition-opacity duration-150 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
           {controls}
         </div>
       ) : null}

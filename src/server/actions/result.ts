@@ -37,17 +37,3 @@ export function fromZod(error: z.ZodError): ActionState {
     errors,
   };
 }
-
-/**
- * Turn an unexpected failure into something safe to show.
- *
- * Raw database errors can carry table names, constraint names and occasionally
- * user data, so they are logged and replaced with a neutral message.
- */
-export function unexpected(error: unknown, context: string): ActionState {
-  console.error(`[${context}]`, error);
-  return {
-    status: "error",
-    message: "Something went wrong on our side. Please try again.",
-  };
-}

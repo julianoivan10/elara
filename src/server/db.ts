@@ -12,7 +12,10 @@ const globalForPrisma = globalThis as unknown as {
 export const db =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+    // Errors are not logged here: they are thrown to the caller, which logs a
+    // sanitised summary (src/server/log.ts). Prisma's own error log prints
+    // validation failures with their query arguments, password hashes included.
+    log: process.env.NODE_ENV === "development" ? ["warn"] : [],
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;

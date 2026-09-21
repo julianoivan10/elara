@@ -68,7 +68,7 @@ export default async function SettingsPage() {
           <p className="text-[0.875rem] leading-relaxed text-ink-muted">
             {AiService.configured
               ? "The assistant is switched on. It only ever reads what is on your profile, it rewrites wording rather than adding facts, and nothing it suggests is saved until you accept it."
-              : "The assistant is off. Set OPENAI_API_KEY in your environment to switch it on. Everything else in ELARA works without it."}
+              : "The assistant is off. Set GEMINI_API_KEY in your environment to switch it on. Everything else in ELARA works without it."}
           </p>
         </Section>
 

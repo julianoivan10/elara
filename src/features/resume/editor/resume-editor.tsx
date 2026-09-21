@@ -40,6 +40,7 @@ import {
   type ResumeMeta,
 } from "@/features/resume/editor/design-panel";
 import { TailorPanel } from "@/features/resume/editor/tailor-panel";
+import { TailorAssist } from "@/features/ai/tailor-assist";
 
 /**
  * The resume editor.
@@ -59,8 +60,10 @@ export function ResumeEditor({
   initialSections,
   profile,
   targetJob,
+  aiEnabled = false,
 }: {
   resumeId: string;
+  aiEnabled?: boolean;
   initialMeta: ResumeMeta;
   initialSections: EditorSection[];
   profile: ProjectionProfile | null;
@@ -190,11 +193,25 @@ export function ResumeEditor({
     />
   );
 
+  // A tailored summary is written to this resume's summary section as an
+  // override, leaving the profile summary untouched.
+  const summarySection = sections.find((section) => section.kind === "SUMMARY");
+  const useSummary = summarySection
+    ? (text: string) =>
+        patchSection(summarySection.id, {
+          visible: true,
+          config: { ...summarySection.config, text },
+        })
+    : undefined;
+
   const designPanel = (
     <div className="flex flex-col gap-7">
       <DesignPanel meta={meta} onChange={patchMeta} targetJob={targetJob} />
       {targetJob ? (
         <TailorPanel targetJob={targetJob} profile={profile} />
+      ) : null}
+      {targetJob && aiEnabled ? (
+        <TailorAssist resumeId={resumeId} onUseSummary={useSummary} />
       ) : null}
     </div>
   );

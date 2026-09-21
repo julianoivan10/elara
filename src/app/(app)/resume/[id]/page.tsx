@@ -7,6 +7,7 @@ import {
   NotFoundError,
 } from "@/server/auth/guards";
 import { CareerService } from "@/services/career.service";
+import { AiService } from "@/services/ai.service";
 import { ResumeService } from "@/services/resume.service";
 import {
   parseConfig,
@@ -23,6 +24,8 @@ import {
 import { ResumeEditor } from "@/features/resume/editor/resume-editor";
 
 export const dynamic = "force-dynamic";
+/** Covers the assistant's server actions on this page (see src/server/ai/gemini.ts). */
+export const maxDuration = 60;
 
 export async function generateMetadata({
   params,
@@ -90,6 +93,7 @@ export default async function ResumeEditorPage({
       }))}
       profile={profile ? toProjectionProfile(profile) : null}
       targetJob={resume.targetJob}
+      aiEnabled={AiService.configured}
     />
   );
 }

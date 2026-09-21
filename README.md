@@ -44,7 +44,7 @@ Both are optional, and the product degrades honestly without them.
 
 | Variable          | Without it                                                       |
 | ----------------- | ---------------------------------------------------------------- |
-| `OPENAI_API_KEY`  | The assistant is hidden; everything else works.                    |
+| `GEMINI_API_KEY`  | The assistant is hidden; everything else works.                    |
 | `RESEND_API_KEY`  | Verification and reset links are logged to the server console.     |
 
 That second one matters: you can complete signup, email verification and a
@@ -60,10 +60,31 @@ printed in the terminal.
 | `npm run typecheck`   | `tsc --noEmit`                                |
 | `npm run lint`        | ESLint                                        |
 | `npm run format`      | Prettier                                      |
-| `npm run db:push`     | Sync the schema                               |
+| `npm run db:push`     | Sync the schema (local development)           |
+| `npm run db:migrate`  | Apply pending migrations (`migrate deploy`)   |
+| `npm run db:status`   | Show migration status                         |
 | `npm run db:seed`     | Seed jobs and the demo account                |
 | `npm run db:reset`    | Wipe, re-create and re-seed                   |
 | `npm run db:studio`   | Prisma Studio                                 |
+
+### Deploying to Vercel with Supabase
+
+1. Set these in the Vercel project (Production **and** Preview):
+   - `DATABASE_URL` — the Supabase **transaction pooler** string, port 6543,
+     ending in `?pgbouncer=true&connection_limit=5`. Not the direct
+     `db.<ref>.supabase.co` host: it is IPv6-only, Vercel cannot reach it, and
+     every query (login included) fails.
+   - `DIRECT_URL` — the session pooler (same host, port 5432) or direct string.
+   - `AUTH_SECRET`, `GEMINI_API_KEY`, and optionally `APP_URL`,
+     `RESEND_API_KEY`, `EMAIL_FROM`.
+2. Apply migrations to the production database from your machine:
+   `npm run db:migrate` (never `db:reset` against production).
+3. Redeploy, then open `/api/health` — it reports whether the deployment can
+   reach the database and its tables. Failures are logged with a Prisma error
+   code and a hint in the Vercel function logs.
+
+The assistant uses Google Gemini through `@google/genai`, server-side only. The
+model is pinned in one place, `src/server/ai/gemini.ts`.
 
 ---
 

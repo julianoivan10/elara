@@ -11,6 +11,9 @@
  *
  * Re-runnable: jobs upsert on (source, externalId) and the demo user upserts on
  * email, so `npm run db:seed` twice is the same as running it once.
+ *
+ * `npm run db:seed -- --jobs-only` loads the catalogue alone. Use that against a
+ * production database: the demo account's password is published in the README.
  */
 import {
   PrismaClient,
@@ -1014,6 +1017,12 @@ async function main() {
   console.info("\nSeeding ELARA\n");
 
   await seedJobs();
+
+  if (process.argv.includes("--jobs-only")) {
+    console.info("\n  --jobs-only: demo account skipped\n");
+    return;
+  }
+
   const { userId } = await seedDemoAccount();
   await seedDemoWorkspace(userId);
 

@@ -18,13 +18,8 @@ import {
   projectSchema,
   skillSchema,
 } from "@/lib/validation/profile";
-import {
-  fail,
-  fromZod,
-  ok,
-  unexpected,
-  type ActionState,
-} from "@/server/actions/result";
+import { fail, fromZod, ok, type ActionState } from "@/server/actions/result";
+import { unexpected } from "@/server/actions/unexpected";
 
 /**
  * Profile CRUD.

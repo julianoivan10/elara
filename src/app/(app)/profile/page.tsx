@@ -11,6 +11,7 @@ import { computeCompletion } from "@/lib/completion";
 import { AiService } from "@/services/ai.service";
 import { PageHeader, PageShell } from "@/features/workspace/page-header";
 import { CompletionChecklist } from "@/features/dashboard/completion-panel";
+import { ProfileReview } from "@/features/ai/profile-review";
 import { BasicsForm } from "@/features/profile/basics-form";
 import { ProfileSection } from "@/features/profile/section";
 import { ExperienceSection } from "@/features/profile/experience-section";
@@ -26,6 +27,8 @@ import {
 
 export const metadata: Metadata = { title: "Career profile" };
 export const dynamic = "force-dynamic";
+/** Covers the assistant's server actions on this page (see src/server/ai/gemini.ts). */
+export const maxDuration = 60;
 
 const JUMP_LINKS = [
   { href: "#basics", label: "Details" },
@@ -99,13 +102,19 @@ export default async function ProfilePage() {
           </ProfileSection>
 
           <LinksSection items={data.links} />
-          <ExperienceSection items={data.experience} />
+          <ExperienceSection
+            items={data.experience}
+            aiEnabled={AiService.configured}
+          />
           <EducationSection items={data.education} />
           <SkillsSection items={data.skills} aiEnabled={AiService.configured} />
           <CertificationsSection items={data.certifications} />
           <LanguagesSection items={data.languages} />
           <AchievementsSection items={data.achievements} />
-          <ProjectsSection items={data.projects} />
+          <ProjectsSection
+            items={data.projects}
+            aiEnabled={AiService.configured}
+          />
         </div>
 
         {/* ------------------------------------------------------ aside */}
@@ -129,6 +138,8 @@ export default async function ProfilePage() {
                 <CompletionChecklist completion={completion} />
               </div>
             </section>
+
+            {AiService.configured ? <ProfileReview /> : null}
 
             <nav aria-label="Profile sections" className="hidden lg:block">
               <Eyebrow className="block border-b border-rule pb-2.5">

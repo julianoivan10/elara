@@ -35,6 +35,7 @@ import {
   ReorderControls,
   TagList,
 } from "@/features/profile/section";
+import { ProjectDescriptionAssist } from "@/features/ai/entry-assist";
 
 const save = saveEntryAction.bind(null, "project");
 
@@ -70,9 +71,11 @@ export function AddProjectButton({
 export function ProjectsSection({
   items,
   standalone = false,
+  aiEnabled = false,
 }: {
   items: Project[];
   standalone?: boolean;
+  aiEnabled?: boolean;
 }) {
   const list =
     items.length === 0 ? (
@@ -174,6 +177,13 @@ export function ProjectsSection({
                   </a>
                 ) : null}
               </div>
+            ) : null}
+
+            {aiEnabled ? (
+              <ProjectDescriptionAssist
+                projectId={item.id}
+                description={item.description}
+              />
             ) : null}
           </EntryRow>
         ))}

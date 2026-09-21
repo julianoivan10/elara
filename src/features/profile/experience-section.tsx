@@ -34,6 +34,7 @@ import {
   ReorderControls,
   TagList,
 } from "@/features/profile/section";
+import { AssistedHighlights } from "@/features/ai/entry-assist";
 
 const EMPLOYMENT_TYPES = [
   "FULL_TIME",
@@ -48,7 +49,13 @@ const LOCATION_TYPES = ["ONSITE", "HYBRID", "REMOTE"] as const;
 
 const save = saveEntryAction.bind(null, "experience");
 
-export function ExperienceSection({ items }: { items: Experience[] }) {
+export function ExperienceSection({
+  items,
+  aiEnabled = false,
+}: {
+  items: Experience[];
+  aiEnabled?: boolean;
+}) {
   return (
     <ProfileSection
       id="experience"
@@ -140,7 +147,15 @@ export function ExperienceSection({ items }: { items: Experience[] }) {
                   {item.summary}
                 </p>
               ) : null}
-              <Highlights items={item.highlights} />
+              {aiEnabled ? (
+                <AssistedHighlights
+                  experienceId={item.id}
+                  role={item.role}
+                  items={item.highlights}
+                />
+              ) : (
+                <Highlights items={item.highlights} />
+              )}
               {item.skills.length > 0 ? (
                 <div className="mt-2.5">
                   <TagList items={item.skills} />

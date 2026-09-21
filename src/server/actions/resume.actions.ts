@@ -18,13 +18,8 @@ import {
   RESUME_FONTS,
 } from "@/features/resume/document";
 import { RESUME_TEMPLATES } from "@/features/resume/templates";
-import {
-  fail,
-  fromZod,
-  ok,
-  unexpected,
-  type ActionState,
-} from "@/server/actions/result";
+import { fail, fromZod, ok, type ActionState } from "@/server/actions/result";
+import { unexpected } from "@/server/actions/unexpected";
 
 /**
  * Resume actions.

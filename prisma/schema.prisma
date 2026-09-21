@@ -16,8 +16,9 @@ datasource db {
 
   // DATABASE_URL is what the running app uses. On a serverless host it should
   // be a *pooled* connection (Supabase's Supavisor on port 6543, with
-  // ?pgbouncer=true&connection_limit=1), because each function instance opens
-  // its own connection and a direct one runs out fast.
+  // ?pgbouncer=true&connection_limit=5), because each function instance opens
+  // its own connections and direct ones run out fast. The limit is above 1
+  // because a Vercel instance serves concurrent requests (Fluid compute).
   url = env("DATABASE_URL")
 
   // DIRECT_URL bypasses the pooler and is used only by `prisma migrate` and

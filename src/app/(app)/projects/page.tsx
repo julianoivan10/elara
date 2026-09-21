@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Eyebrow } from "@/components/ui/editorial";
 import { requireUser } from "@/server/auth/guards";
 import { CareerService } from "@/services/career.service";
+import { AiService } from "@/services/ai.service";
 import { PageHeader, PageShell } from "@/features/workspace/page-header";
 import {
   AddProjectButton,
@@ -11,6 +12,8 @@ import {
 
 export const metadata: Metadata = { title: "Projects" };
 export const dynamic = "force-dynamic";
+/** Covers the assistant's server actions on this page (see src/server/ai/gemini.ts). */
+export const maxDuration = 60;
 
 /**
  * The portfolio. Same records as the profile's projects section, given room to
@@ -48,7 +51,11 @@ export default async function ProjectsPage() {
         </div>
       ) : null}
 
-      <ProjectsSection items={projects} standalone />
+      <ProjectsSection
+        items={projects}
+        standalone
+        aiEnabled={AiService.configured}
+      />
     </PageShell>
   );
 }

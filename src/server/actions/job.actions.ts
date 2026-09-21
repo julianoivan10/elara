@@ -6,12 +6,8 @@ import { db } from "@/server/db";
 import { requireUser } from "@/server/auth/guards";
 import { JobService } from "@/services/job.service";
 import { ApplicationService } from "@/services/application.service";
-import {
-  fail,
-  ok,
-  unexpected,
-  type ActionState,
-} from "@/server/actions/result";
+import { fail, ok, type ActionState } from "@/server/actions/result";
+import { unexpected } from "@/server/actions/unexpected";
 
 /** Save or unsave a job. One button, one action, reported back to the caller. */
 export async function toggleSavedJobAction(
