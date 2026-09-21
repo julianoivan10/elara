@@ -35,6 +35,19 @@ export const CareerService = {
     });
   },
 
+  /**
+   * Just the skill names, for job matching. The job pages need nothing else
+   * from the profile, so they should not pay for loading all of it.
+   */
+  async getSkillNames(userId: string): Promise<string[]> {
+    const skills = await db.skill.findMany({
+      where: { profile: { userId } },
+      orderBy: orderBySort,
+      select: { name: true },
+    });
+    return skills.map((skill) => skill.name);
+  },
+
   /** Create on demand so the workspace never faces a missing profile. */
   async ensureProfile(userId: string, fallbackName: string) {
     return db.profile.upsert({

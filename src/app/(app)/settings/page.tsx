@@ -26,11 +26,19 @@ export default async function SettingsPage() {
     where: { id: user.id },
     select: {
       createdAt: true,
+      // Read only to derive `hasPassword` below; the hash is never rendered.
+      passwordHash: true,
+      accounts: { select: { provider: true } },
       _count: {
         select: { resumes: true, applications: true, savedJobs: true },
       },
     },
   });
+
+  const hasPassword = Boolean(account?.passwordHash);
+  const usesGoogle = Boolean(
+    account?.accounts.some((a) => a.provider === "google"),
+  );
 
   return (
     <PageShell className="max-w-3xl">
@@ -61,7 +69,21 @@ export default async function SettingsPage() {
         </Section>
 
         <Section index="03" title="Password">
-          <PasswordForm />
+          {usesGoogle ? (
+            <p className="mb-4 text-[0.8125rem] leading-relaxed text-ink-muted">
+              Google sign-in is connected to this account.
+            </p>
+          ) : null}
+          {hasPassword ? (
+            <PasswordForm />
+          ) : (
+            <p className="max-w-[60ch] text-[0.875rem] leading-relaxed text-ink-muted">
+              You sign in with Google, so there is no password on this account.
+              To add one, log out and use{" "}
+              <span className="text-ink">Forgot password</span> on the login
+              page; the link we email you lets you set it.
+            </p>
+          )}
         </Section>
 
         <Section index="04" title="Assistant">
@@ -120,7 +142,7 @@ export default async function SettingsPage() {
                 any resume you want to keep first.
               </p>
               <div className="pt-1">
-                <DeleteAccountDialog />
+                <DeleteAccountDialog hasPassword={hasPassword} />
               </div>
             </div>
           </div>

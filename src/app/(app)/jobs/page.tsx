@@ -30,14 +30,15 @@ export default async function JobsPage({
   // rather than throwing.
   const filters = jobFiltersSchema.parse(raw);
 
-  const [{ jobs, total, page, pages }, skills, profile] = await Promise.all([
-    JobService.search(filters, user.id),
-    JobService.popularSkills(),
-    CareerService.getProfile(user.id),
-  ]);
+  const [{ jobs, total, page, pages }, skills, profileSkills] =
+    await Promise.all([
+      JobService.search(filters, user.id),
+      JobService.popularSkills(),
+      CareerService.getSkillNames(user.id),
+    ]);
 
   const matched = new Set(
-    (profile?.skills ?? []).map((skill) => skill.name.toLowerCase().trim()),
+    profileSkills.map((skill) => skill.toLowerCase().trim()),
   );
 
   return (

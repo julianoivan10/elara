@@ -58,6 +58,7 @@ function sweep(now: number) {
 
 export const LIMITS = {
   login: { limit: 8, windowMs: 10 * 60 * 1000 },
+  oauth: { limit: 20, windowMs: 10 * 60 * 1000 },
   register: { limit: 5, windowMs: 60 * 60 * 1000 },
   passwordReset: { limit: 5, windowMs: 60 * 60 * 1000 },
   ai: { limit: 30, windowMs: 60 * 60 * 1000 },

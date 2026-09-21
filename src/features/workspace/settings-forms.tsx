@@ -180,7 +180,11 @@ export function VerifyEmailRow({
  * this removes the profile, every resume, every saved job and the whole
  * application history with no way back.
  */
-export function DeleteAccountDialog() {
+export function DeleteAccountDialog({
+  hasPassword = true,
+}: {
+  hasPassword?: boolean;
+}) {
   const [open, setOpen] = React.useState(false);
   const [state, action] = React.useActionState(deleteAccountAction, idle);
 
@@ -203,15 +207,17 @@ export function DeleteAccountDialog() {
           <DialogBody className="flex flex-col gap-5">
             <FormMessage state={state} />
 
-            <Field error={fieldError(state, "password")}>
-              <FieldLabel>Your password</FieldLabel>
-              <Input
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-              />
-            </Field>
+            {hasPassword ? (
+              <Field error={fieldError(state, "password")}>
+                <FieldLabel>Your password</FieldLabel>
+                <Input
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                />
+              </Field>
+            ) : null}
 
             <Field error={fieldError(state, "confirm")}>
               <FieldLabel>Type “delete my account”</FieldLabel>

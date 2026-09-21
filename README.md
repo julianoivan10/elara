@@ -40,14 +40,15 @@ Already have a Postgres? Skip `db:up` and point `DATABASE_URL` at it.
 
 ### Optional integrations
 
-Both are optional, and the product degrades honestly without them.
+All are optional, and the product degrades honestly without them.
 
 | Variable          | Without it                                                       |
 | ----------------- | ---------------------------------------------------------------- |
 | `GEMINI_API_KEY`  | The assistant is hidden; everything else works.                    |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | No "Continue with Google"; email and password work as before. |
 | `RESEND_API_KEY`  | Verification and reset links are logged to the server console.     |
 
-That second one matters: you can complete signup, email verification and a
+The last one matters: you can complete signup, email verification and a
 password reset on a fresh clone with no third-party account — the link is
 printed in the terminal.
 
@@ -75,13 +76,35 @@ printed in the terminal.
      `db.<ref>.supabase.co` host: it is IPv6-only, Vercel cannot reach it, and
      every query (login included) fails.
    - `DIRECT_URL` — the session pooler (same host, port 5432) or direct string.
-   - `AUTH_SECRET`, `GEMINI_API_KEY`, and optionally `APP_URL`,
-     `RESEND_API_KEY`, `EMAIL_FROM`.
+   - `APP_URL` — `https://elara-alpha-ten.vercel.app`. The Google callback URL
+     is built from it.
+   - `AUTH_SECRET`, `GEMINI_API_KEY`, and optionally `GOOGLE_CLIENT_ID` +
+     `GOOGLE_CLIENT_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`.
 2. Apply migrations to the production database from your machine:
    `npm run db:migrate` (never `db:reset` against production).
 3. Redeploy, then open `/api/health` — it reports whether the deployment can
    reach the database and its tables. Failures are logged with a Prisma error
    code and a hint in the Vercel function logs.
+
+**Function region.** `vercel.json` pins functions to `bom1` (Mumbai), the
+same AWS region as the Supabase database (`ap-south-1`). Vercel's default,
+`iad1` (Washington), put every database round trip across the world: about
+200 ms each, and a page needs several in sequence. If the database ever moves,
+move this with it.
+
+**Google sign-in.** Create an OAuth client ("Web application") in Google Cloud
+Console with:
+
+- Authorized JavaScript origins: `http://localhost:3000`,
+  `https://elara-alpha-ten.vercel.app`
+- Authorized redirect URIs: `http://localhost:3000/api/auth/google/callback`,
+  `https://elara-alpha-ten.vercel.app/api/auth/google/callback`
+
+The callback is always `APP_URL` + `/api/auth/google/callback`, so preview
+deployments hand off to the production domain rather than needing their own
+entry. A Google sign-in with an email that already has an ELARA account is
+linked to that account rather than creating a second one (see
+`src/server/auth/google-account.ts`).
 
 The assistant uses Google Gemini through `@google/genai`, server-side only. The
 model is pinned in one place, `src/server/ai/gemini.ts`.

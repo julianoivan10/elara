@@ -19,6 +19,11 @@ const schema = z.object({
   // (src/server/ai/gemini.ts), because prompts are tuned against it.
   GEMINI_API_KEY: z.string().optional(),
 
+  // Google sign-in (OAuth 2.0 / OpenID Connect). Both or neither: the button
+  // only appears when the pair is present. The secret is server-only.
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("ELARA <onboarding@resend.dev>"),
 
@@ -33,6 +38,8 @@ function read() {
     APP_URL: emptyToUndefined(process.env.APP_URL) ?? vercelUrl(),
     AUTH_SECRET: process.env.AUTH_SECRET,
     GEMINI_API_KEY: emptyToUndefined(process.env.GEMINI_API_KEY),
+    GOOGLE_CLIENT_ID: emptyToUndefined(process.env.GOOGLE_CLIENT_ID),
+    GOOGLE_CLIENT_SECRET: emptyToUndefined(process.env.GOOGLE_CLIENT_SECRET),
     RESEND_API_KEY: emptyToUndefined(process.env.RESEND_API_KEY),
     EMAIL_FROM: emptyToUndefined(process.env.EMAIL_FROM),
     NODE_ENV: process.env.NODE_ENV,
@@ -68,3 +75,6 @@ export const env = read();
 
 export const isAiConfigured = Boolean(env.GEMINI_API_KEY);
 export const isEmailConfigured = Boolean(env.RESEND_API_KEY);
+export const isGoogleConfigured = Boolean(
+  env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET,
+);

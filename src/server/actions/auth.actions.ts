@@ -168,9 +168,10 @@ export async function loginAction(
       select: { id: true, passwordHash: true },
     });
 
-    if (!user) {
-      // Spend comparable time so a missing account is not measurably faster
-      // than a wrong password.
+    // A missing account, and an account with no password (it signs in with
+    // Google), get the same answer after the same amount of work, so neither
+    // is distinguishable from a wrong password.
+    if (!user?.passwordHash) {
       await fakeVerify();
       return invalid;
     }
@@ -390,7 +391,19 @@ export async function changePasswordAction(
       select: { passwordHash: true },
     });
 
-    if (!record || !(await verifyPassword(current, record.passwordHash))) {
+    // An account that signs in with Google has no current password to
+    // prove. Adding one goes through the reset link instead, which proves
+    // control of the inbox rather than trusting a session alone.
+    if (record && !record.passwordHash) {
+      return fail(
+        "Your account signs in with Google and has no password yet. To add one, use “Forgot password” on the login page and follow the link we email you.",
+      );
+    }
+
+    if (
+      !record?.passwordHash ||
+      !(await verifyPassword(current, record.passwordHash))
+    ) {
       return fail("Check the highlighted fields.", {
         current: "That is not your current password.",
       });

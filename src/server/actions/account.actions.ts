@@ -70,7 +70,13 @@ export async function deleteAccountAction(
       select: { passwordHash: true },
     });
 
-    if (!record || !(await verifyPassword(password, record.passwordHash))) {
+    // Accounts with a password must re-enter it. A Google-only account has
+    // none, so the typed confirmation above is its deliberate-intent check.
+    if (!record) return fail("That account no longer exists.");
+    if (
+      record.passwordHash &&
+      !(await verifyPassword(password, record.passwordHash))
+    ) {
       return fail("That password is not right.", {
         password: "That password is not right.",
       });

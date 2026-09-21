@@ -41,17 +41,14 @@ export default async function JobDetailPage({
   const { id } = await params;
   const user = await requireUser();
 
-  const [job, profile] = await Promise.all([
+  const [job, profileSkills] = await Promise.all([
     JobService.get(id, user.id),
-    CareerService.getProfile(user.id),
+    CareerService.getSkillNames(user.id),
   ]);
 
   if (!job) notFound();
 
-  const match = skillMatch(
-    job.skills,
-    (profile?.skills ?? []).map((skill) => skill.name),
-  );
+  const match = skillMatch(job.skills, profileSkills);
 
   const salary = salaryRange(job);
 

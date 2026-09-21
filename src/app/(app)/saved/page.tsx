@@ -17,13 +17,13 @@ export const dynamic = "force-dynamic";
 export default async function SavedJobsPage() {
   const user = await requireUser();
 
-  const [saved, profile] = await Promise.all([
+  const [saved, profileSkills] = await Promise.all([
     JobService.listSaved(user.id),
-    CareerService.getProfile(user.id),
+    CareerService.getSkillNames(user.id),
   ]);
 
   const matched = new Set(
-    (profile?.skills ?? []).map((skill) => skill.name.toLowerCase().trim()),
+    profileSkills.map((skill) => skill.toLowerCase().trim()),
   );
 
   return (

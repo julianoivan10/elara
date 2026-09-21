@@ -9,6 +9,13 @@
 
 generator client {
   provider = "prisma-client-js"
+
+  // Load relations with one SQL statement (LATERAL joins) instead of one
+  // query per relation. Measured: the full profile went from 10 sequential
+  // queries inside a transaction to 1, and every query costs a network round
+  // trip to the database, so this is the difference between ~4.5s and well
+  // under a second per page in production.
+  previewFeatures = ["relationJoins"]
 }
 
 datasource db {
@@ -32,13 +39,16 @@ datasource db {
 model User {
   id              String    @id @default(cuid())
   email           String    @unique
-  passwordHash    String
+  /// Null for accounts that have only ever signed in with a provider such as
+  /// Google. Such a user can add a password later through password reset.
+  passwordHash    String?
   name            String
   emailVerifiedAt DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   profile      Profile?
+  accounts     Account[]
   sessions     Session[]
   tokens       VerificationToken[]
   resumes      Resume[]
@@ -47,6 +57,29 @@ model User {
   aiUsage      AiUsage[]
 
   @@index([createdAt])
+}
+
+/// An external identity linked to a user: one row per provider login.
+///
+/// Email/password stays on User itself (it predates this table, and every
+/// existing account uses it). Providers are rows here, so adding another one
+/// later is a new `provider` value, not a schema change.
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  /// "google"
+  provider          String
+  /// The provider's stable subject identifier (OIDC `sub`). Never the email:
+  /// an address can change hands, a subject cannot.
+  providerAccountId String
+  /// The provider's email at the time of linking, for display and support.
+  email             String?
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
