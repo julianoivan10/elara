@@ -7,9 +7,12 @@ import { db } from "@/server/db";
 import { logError } from "@/server/log";
 import { requireProfile, requireUser } from "@/server/auth/guards";
 import { CareerService, type FullProfile } from "@/services/career.service";
+import { loadMatchProfile } from "@/services/match.service";
+import { liveJobWhere } from "@/services/job.service";
 import {
   AiService,
   AiUserError,
+  type JobMatchReview,
   type ProfileContext,
   type ProfileReview,
   type Suggestions,
@@ -476,6 +479,115 @@ export async function reviewProfileAction(): Promise<AiResult<ProfileReview>> {
     return { status: "ok", data };
   } catch (error) {
     return toError(error, "reviewProfileAction");
+  }
+}
+
+/* ---------------------------------------------------------------- matches */
+
+/**
+ * The assistant's read on the top recommendations. The client names only job
+ * ids (at most five); jobs and profile are read here, and only live jobs are
+ * reviewed.
+ */
+export async function reviewMatchesAction(
+  jobIds: string[],
+): Promise<AiResult<JobMatchReview[]>> {
+  const user = await requireUser();
+
+  const parsed = z.array(id).min(1).max(5).safeParse(jobIds);
+  if (!parsed.success) {
+    return { status: "error", message: "Pick up to five jobs to review." };
+  }
+
+  try {
+    const [jobs, profile] = await Promise.all([
+      db.job.findMany({
+        where: { AND: [liveJobWhere(), { id: { in: parsed.data } }] },
+        select: {
+          id: true,
+          title: true,
+          company: true,
+          skills: true,
+          requirements: true,
+        },
+      }),
+      loadMatchProfile(user.id),
+    ]);
+
+    if (
+      !profile ||
+      (profile.skills.length === 0 && profile.roles.length === 0)
+    ) {
+      return { status: "error", message: THIN_PROFILE };
+    }
+    if (jobs.length === 0) {
+      return { status: "error", message: "Those jobs are no longer listed." };
+    }
+
+    const data = await AiService.reviewJobMatches(user.id, {
+      profile: {
+        skills: profile.skills,
+        targetRoles: profile.targetRoles,
+        roles: profile.roles.map((r) => `${r.role} at ${r.company}`),
+        projects: profile.projects,
+      },
+      jobs: jobs.map((j) => ({
+        ...j,
+        requirements: j.requirements.slice(0, 8).map((r) => r.slice(0, 300)),
+      })),
+    });
+    return { status: "ok", data };
+  } catch (error) {
+    return toError(error, "reviewMatchesAction");
+  }
+}
+
+/* ----------------------------------------------------------- cover letter */
+
+export async function draftCoverLetterAction(
+  jobId: string,
+): Promise<
+  AiResult<{ letter: string | null; notes: string[]; filtered: boolean }>
+> {
+  const user = await requireUser();
+
+  const parsedId = id.safeParse(jobId);
+  if (!parsedId.success) {
+    return { status: "error", message: "That job is no longer listed." };
+  }
+
+  try {
+    const [job, profile] = await Promise.all([
+      db.job.findFirst({
+        where: { id: parsedId.data, isDemo: false },
+        select: {
+          title: true,
+          company: true,
+          summary: true,
+          requirements: true,
+          responsibilities: true,
+        },
+      }),
+      CareerService.getProfile(user.id),
+    ]);
+    if (!job)
+      return { status: "error", message: "That job is no longer listed." };
+
+    const context = toContext(profile);
+    if (!hasSubstance(context))
+      return { status: "error", message: THIN_PROFILE };
+
+    const data = await AiService.draftCoverLetter(user.id, {
+      job: {
+        ...job,
+        requirements: job.requirements.slice(0, 10),
+        responsibilities: job.responsibilities.slice(0, 8),
+      },
+      profile: context,
+    });
+    return { status: "ok", data };
+  } catch (error) {
+    return toError(error, "draftCoverLetterAction");
   }
 }
 

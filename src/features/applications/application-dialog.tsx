@@ -28,11 +28,14 @@ import {
 } from "@/server/actions/application.actions";
 import { DeleteEntryButton } from "@/features/profile/entry-dialog";
 import {
+  METHOD_LABEL,
   STATUS_LABEL,
   STATUS_ORDER,
   STATUS_TONE,
   type BoardApplication,
 } from "@/features/applications/types";
+import { isProviderKey, PROVIDER_LABEL } from "@/lib/jobs/types";
+import { fullDate } from "@/lib/format";
 
 type Detail = Awaited<ReturnType<typeof loadApplicationDetailAction>>;
 
@@ -66,6 +69,8 @@ export function ApplicationDialog({
         />
 
         <DialogBody className="flex flex-col gap-6">
+          <ApplicationSummary application={application} />
+
           {/* ------------------------------------------------- stage */}
           <div className="flex flex-wrap items-center gap-2">
             {STATUS_ORDER.map((status) => {
@@ -384,6 +389,81 @@ function NotesList({ applicationId }: { applicationId: string }) {
           later.
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * What was actually sent, and how: the method (never implying ELARA submitted
+ * anything it did not), the source, and the resume version used.
+ */
+function ApplicationSummary({
+  application,
+}: {
+  application: BoardApplication;
+}) {
+  const applied =
+    application.appliedAt &&
+    application.status !== "SAVED" &&
+    application.status !== "PREPARED";
+  const rows: [string, React.ReactNode][] = [];
+  if (applied) rows.push(["How", METHOD_LABEL[application.method]]);
+  if (application.provider) {
+    rows.push([
+      "Source",
+      isProviderKey(application.provider)
+        ? PROVIDER_LABEL[application.provider]
+        : application.provider,
+    ]);
+  }
+  if (application.resume) {
+    rows.push([
+      "Resume",
+      <Link
+        key="r"
+        href={`/resume/${application.resume.id}`}
+        className="text-cobalt-ink underline decoration-cobalt-soft underline-offset-4"
+      >
+        {application.resume.title}
+      </Link>,
+    ]);
+  }
+  if (application.hasCoverLetter) rows.push(["Cover letter", "Prepared"]);
+  if (application.preparedAt)
+    rows.push(["Prepared", fullDate(application.preparedAt)]);
+  if (applied) rows.push(["Applied", fullDate(application.appliedAt)]);
+
+  if (rows.length === 0 && !application.job) return null;
+
+  return (
+    <div className="flex flex-col gap-3 rounded-md border border-rule bg-raised/40 p-4">
+      {rows.length ? (
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-[0.8125rem]">
+          {rows.map(([label, value]) => (
+            <React.Fragment key={label}>
+              <dt className="eyebrow pt-0.5">{label}</dt>
+              <dd className="min-w-0 text-ink [overflow-wrap:anywhere]">
+                {value}
+              </dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      ) : null}
+      {application.job && application.job.isActive && !applied ? (
+        <Link
+          href={`/jobs/${application.job.id}/apply`}
+          className="self-start text-[0.8125rem] text-cobalt-ink underline decoration-cobalt-soft underline-offset-4"
+        >
+          {application.status === "PREPARED"
+            ? "Review your prepared application"
+            : "Prepare this application"}
+        </Link>
+      ) : null}
+      {application.job && !application.job.isActive ? (
+        <p className="text-[0.75rem] text-warning">
+          The original listing has closed.
+        </p>
+      ) : null}
     </div>
   );
 }

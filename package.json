@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:status": "prisma migrate status",
     "db:seed": "tsx prisma/seed.ts",
+    "jobs:sync": "tsx --env-file-if-exists=.env --conditions=react-server scripts/sync-jobs.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma db push --force-reset && npm run db:seed",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\" \"prisma/*.ts\"",

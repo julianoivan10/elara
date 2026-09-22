@@ -570,4 +570,132 @@ JSON shape: { "strengths": string[], "suggestions": [{ "area": string, "advice":
       schema,
     );
   },
+
+  /**
+   * A second opinion on the few best deterministic matches, in one call.
+   *
+   * Only the top candidates are sent (never the whole catalogue), with a
+   * minimal slice of the profile: skills, target roles, role titles and
+   * project names — no contact details, summary or employment dates.
+   * Reviews for jobs that were not sent, or that state figures the input did
+   * not contain, are dropped.
+   */
+  async reviewJobMatches(
+    userId: string,
+    input: {
+      profile: {
+        skills: string[];
+        targetRoles: string[];
+        roles: string[];
+        projects: { name: string; technologies: string[] }[];
+      };
+      jobs: {
+        id: string;
+        title: string;
+        company: string;
+        skills: string[];
+        requirements: string[];
+      }[];
+    },
+  ): Promise<JobMatchReview[]> {
+    const schema = z.object({
+      reviews: z
+        .array(
+          z.object({
+            jobId: z.string(),
+            verdict: z.enum(["strong", "worth_a_look", "stretch"]),
+            why: z.array(z.string().trim().min(1)).max(3).default([]),
+            gaps: z.array(z.string().trim().min(1)).max(3).default([]),
+          }),
+        )
+        .max(10)
+        .default([]),
+    });
+
+    const context = JSON.stringify(input, null, 2);
+    const result = await complete(
+      { userId, kind: "JOB_MATCH" },
+      `Compare this person's profile with each job posting and give an honest, brief read of the fit.
+
+INPUT
+${context}
+
+For each job, return:
+- "jobId": exactly as given.
+- "verdict": "strong" when the profile clearly covers what the posting asks for, "worth_a_look" when it covers much of it, "stretch" when important requirements are not evidenced.
+- "why": up to 3 short points, each citing something actually in the profile (a skill, a role title, a project name).
+- "gaps": up to 3 requirements the profile does not evidence. Do not suggest claiming them.
+
+Never state that the person has experience, skills or results not listed in the profile. Do not invent numbers or years of experience.
+
+JSON shape: { "reviews": [{ "jobId": string, "verdict": "strong" | "worth_a_look" | "stretch", "why": string[], "gaps": string[] }] }`,
+      schema,
+    );
+
+    const sent = new Set(input.jobs.map((j) => j.id));
+    return result.reviews
+      .filter((r) => sent.has(r.jobId))
+      .map((r) => ({
+        ...r,
+        why: r.why.filter((line) => !containsInventedNumbers(line, context)),
+        gaps: r.gaps.filter((line) => !containsInventedNumbers(line, context)),
+      }));
+  },
+
+  /**
+   * A cover letter draft built only from the profile and the posting. It is a
+   * draft for the person to edit and send themselves; ELARA never sends it.
+   */
+  async draftCoverLetter(
+    userId: string,
+    input: {
+      job: {
+        title: string;
+        company: string;
+        summary: string;
+        requirements: string[];
+        responsibilities: string[];
+      };
+      profile: ProfileContext;
+    },
+  ): Promise<{ letter: string | null; notes: string[]; filtered: boolean }> {
+    const schema = z.object({
+      letter: z.string().trim().min(1).max(4000).nullish(),
+      notes: z.array(z.string()).max(4).default([]),
+    });
+
+    const context = JSON.stringify(input, null, 2);
+    const result = await complete(
+      { userId, kind: "COVER_LETTER" },
+      `Draft a short cover letter (three short paragraphs, under 250 words) for this job, from this person.
+
+INPUT
+${context}
+
+Rules:
+- Use only facts from the profile. Name only employers, roles, projects and skills the profile lists.
+- Connect the person's real experience to what the posting asks for; where the profile does not show something the posting wants, do not claim it.
+- No numbers, dates or years of experience unless they appear in the profile.
+- Plain, confident, specific. No "I am writing to express my interest". No sign-off name placeholder; end after the closing sentence.
+- If the profile is too thin to write an honest letter, set "letter" to null and say what is missing in "notes".
+
+JSON shape: { "letter": string | null, "notes": string[] }`,
+      schema,
+    );
+
+    const letter = result.letter ?? null;
+    // The same backstop as elsewhere: a figure the input did not contain
+    // means the draft is discarded rather than shown.
+    if (letter && containsInventedNumbers(letter, context)) {
+      return { letter: null, notes: result.notes, filtered: true };
+    }
+    return { letter, notes: result.notes, filtered: false };
+  },
+};
+
+export type JobMatchReview = {
+  jobId: string;
+  verdict: "strong" | "worth_a_look" | "stretch";
+  why: string[];
+  gaps: string[];
 };

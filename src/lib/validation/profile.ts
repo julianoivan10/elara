@@ -231,3 +231,51 @@ export const reorderSchema = z.object({
   id: z.string().min(1),
   direction: z.enum(["up", "down"]),
 });
+
+/* ------------------------------------------------------- job preferences */
+
+const WORKPLACES = ["ONSITE", "HYBRID", "REMOTE"] as const;
+const CONTRACTS = [
+  "FULL_TIME",
+  "PART_TIME",
+  "CONTRACT",
+  "INTERNSHIP",
+  "FREELANCE",
+  "VOLUNTEER",
+] as const;
+
+/**
+ * What the person is looking for. Every field is optional; an empty list
+ * means "no preference", so nothing is filtered out on its account.
+ */
+export const preferencesSchema = z
+  .object({
+    targetRoles: tags.transform((v) =>
+      v.map((r) => r.slice(0, 80)).slice(0, 8),
+    ),
+    preferredLocations: tags.transform((v) =>
+      v.map((l) => l.slice(0, 80)).slice(0, 8),
+    ),
+    preferredLocationTypes: z.array(z.enum(WORKPLACES)).max(3).default([]),
+    preferredEmploymentTypes: z.array(z.enum(CONTRACTS)).max(6).default([]),
+    desiredSalaryMin: z
+      .string()
+      .trim()
+      .optional()
+      .transform((v) => (v ? Number(v.replace(/[^\d]/g, "")) || null : null))
+      .refine((v) => v === null || (v > 0 && v <= 100_000_000), {
+        message: "Enter a yearly amount.",
+      }),
+    desiredSalaryCurrency: z
+      .string()
+      .trim()
+      .optional()
+      .transform((v) => (v ? v.toUpperCase() : null))
+      .refine((v) => v === null || /^[A-Z]{3}$/.test(v), {
+        message: "Use a three-letter currency code, like SGD.",
+      }),
+  })
+  .refine((v) => !v.desiredSalaryMin || v.desiredSalaryCurrency, {
+    message: "Say which currency that amount is in.",
+    path: ["desiredSalaryCurrency"],
+  });

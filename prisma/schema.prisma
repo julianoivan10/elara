@@ -130,6 +130,15 @@ model Profile {
   avatarUrl  String?
   openToWork Boolean @default(true)
 
+  // Job preferences. Used to filter and rank real listings; all optional, and
+  // an empty list means "no preference", never "none of these".
+  targetRoles              String[]         @default([])
+  preferredLocationTypes   LocationType[]   @default([])
+  preferredEmploymentTypes EmploymentType[] @default([])
+  preferredLocations       String[]         @default([])
+  desiredSalaryMin         Int?
+  desiredSalaryCurrency    String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -333,9 +342,10 @@ model Resume {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  targetJob Job?            @relation(fields: [targetJobId], references: [id], onDelete: SetNull)
-  sections  ResumeSection[]
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetJob    Job?            @relation(fields: [targetJobId], references: [id], onDelete: SetNull)
+  sections     ResumeSection[]
+  applications Application[]
 
   @@index([userId, updatedAt])
 }
@@ -372,32 +382,106 @@ enum SalaryPeriod {
   YEAR
 }
 
-model Job {
-  id               String         @id @default(cuid())
-  source           String         @default("elara")
-  externalId       String?
-  title            String
-  company          String
-  companyDomain    String?
-  location         String
-  locationType     LocationType   @default(ONSITE)
-  employmentType   EmploymentType @default(FULL_TIME)
-  seniority        Seniority      @default(MID)
-  salaryMin        Int?
-  salaryMax        Int?
-  salaryCurrency   String?
-  salaryPeriod     SalaryPeriod?
-  summary          String
-  description      String
-  requirements     String[]
-  responsibilities String[]
-  skills           String[]
-  benefits         String[]
-  applyUrl         String
-  postedAt         DateTime       @default(now())
-  expiresAt        DateTime?
-  isDemo           Boolean        @default(true)
+/// Where live listings come from: one row per company job board (Ashby,
+/// Greenhouse, Lever) or per aggregator search (Adzuna). Adding a company is a
+/// new row, not a code change. Sync health is recorded here too.
+model JobSource {
+  id       String  @id @default(cuid())
+  /// "ashby" | "greenhouse" | "lever" | "adzuna"
+  provider String
+  /// Board token / Lever site name, or "country|query" for an aggregator.
+  key      String
+  /// Company name (ATS boards) or a label (aggregator searches).
+  name     String
+  enabled  Boolean @default(true)
 
+  lastSyncedAt  DateTime?
+  lastSuccessAt DateTime?
+  lastError     String?
+  lastJobCount  Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs Job[]
+
+  @@unique([provider, key])
+}
+
+model Job {
+  id         String  @id @default(cuid())
+  /// Provider key: "ashby" | "greenhouse" | "lever" | "adzuna" ("elara" for
+  /// the local sample catalogue, which is never shown as a live listing).
+  source     String  @default("elara")
+  /// The provider's own job id. Unique per provider.
+  externalId String?
+  sourceId   String?
+
+  title          String
+  company        String
+  companyDomain  String?
+  companyLogoUrl String?
+  department     String?
+
+  /// Primary location as the provider wrote it; `locations` holds every one.
+  location       String
+  locations      String[] @default([])
+  /// Lower-cased join of every location, for case-insensitive search.
+  locationSearch String   @default("")
+
+  // Unknown stays null: a posting that does not say "remote" is not assumed
+  // to be on-site, and one that names no contract is not assumed full time.
+  locationType   LocationType?
+  employmentType EmploymentType?
+  seniority      Seniority?
+
+  salaryMin       Int?
+  salaryMax       Int?
+  salaryCurrency  String?
+  salaryPeriod    SalaryPeriod?
+  /// Salary converted to a yearly figure in its own currency, for filtering
+  /// and sorting across hourly, monthly and yearly postings.
+  salaryAnnualMin Int?
+  salaryAnnualMax Int?
+
+  summary              String
+  /// Plain text converted from the provider's HTML at ingestion. Never
+  /// rendered as HTML.
+  description          String
+  /// True when the provider only supplies an excerpt (aggregators).
+  descriptionIsExcerpt Boolean  @default(false)
+  requirements         String[]
+  responsibilities     String[]
+  /// Only skills whose names appear in the posting's own text.
+  skills               String[]
+  benefits             String[]
+
+  /// The official application page.
+  applyUrl          String
+  /// The public posting page, when different from the application page.
+  sourceUrl         String?
+  applicationMethod ApplicationMethod @default(EXTERNAL_LINK)
+
+  postedAt          DateTime?
+  expiresAt         DateTime?
+  providerUpdatedAt DateTime?
+
+  // Freshness. A listing that disappears from its source is marked inactive,
+  // not deleted, so saved jobs and applications keep their reference.
+  isActive       Boolean  @default(true)
+  /// "removed" (gone from the source) | "expired" | "duplicate"
+  inactiveReason String?
+  firstSeenAt    DateTime @default(now())
+  lastSeenAt     DateTime @default(now())
+
+  /// company|title|location, normalised: finds the same job across providers.
+  fingerprint String?
+  /// Hash of the normalised content, so unchanged listings are not rewritten.
+  contentHash String?
+
+  isDemo Boolean @default(true)
+
+  jobSource    JobSource?    @relation(fields: [sourceId], references: [id], onDelete: SetNull)
   savedBy      SavedJob[]
   applications Application[]
   resumes      Resume[]
@@ -405,6 +489,10 @@ model Job {
   @@unique([source, externalId])
   @@index([postedAt])
   @@index([locationType, employmentType])
+  @@index([isActive, isDemo, postedAt])
+  @@index([sourceId])
+  @@index([fingerprint])
+  @@index([skills], type: Gin)
 }
 
 model SavedJob {
@@ -425,12 +513,25 @@ model SavedJob {
 
 enum ApplicationStatus {
   SAVED
+  /// Resume, cover letter and answers are ready; not yet sent.
+  PREPARED
   APPLIED
   SCREENING
   INTERVIEW
   ASSESSMENT
   OFFER
   REJECTED
+}
+
+/// How an application reaches the employer.
+///   EXTERNAL_LINK: the person applies on the official page themselves.
+///   ASSISTED:      ELARA prepares everything; the person still submits.
+///   ATS:           submitted through a provider's official, authorised API.
+///                  Not used until such an integration exists.
+enum ApplicationMethod {
+  EXTERNAL_LINK
+  ASSISTED
+  ATS
 }
 
 model Application {
@@ -444,6 +545,18 @@ model Application {
   source   String?
   status   ApplicationStatus @default(SAVED)
 
+  method         ApplicationMethod @default(EXTERNAL_LINK)
+  /// Job provider the listing came from ("greenhouse", …), for ATS routing.
+  provider       String?
+  resumeId       String?
+  /// The resume as it was when the application was marked applied, so later
+  /// edits do not rewrite what was actually sent.
+  resumeSnapshot Json?
+  coverLetter    String?
+  /// Prepared answers: [{ question, answer }].
+  answers        Json?
+  preparedAt     DateTime?
+
   appliedAt      DateTime?
   nextEventAt    DateTime?
   nextEventLabel String?
@@ -454,11 +567,13 @@ model Application {
 
   user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   job    Job?               @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  resume Resume?            @relation(fields: [resumeId], references: [id], onDelete: SetNull)
   notes  ApplicationNote[]
   events ApplicationEvent[]
 
   @@index([userId, status, sortIndex])
   @@index([userId, updatedAt])
+  @@index([userId, jobId])
 }
 
 model ApplicationNote {
@@ -494,6 +609,8 @@ enum AiTaskKind {
   ANALYZE_JOB
   TAILOR_RESUME
   PROFILE_REVIEW
+  COVER_LETTER
+  JOB_MATCH
 }
 
 model AiUsage {

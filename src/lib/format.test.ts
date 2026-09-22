@@ -110,6 +110,12 @@ describe("salaryRange", () => {
     ).toContain("/hr");
   });
 
+  it("does not guess a currency", () => {
+    expect(
+      salaryRange({ salaryMin: 5000, salaryMax: 7000, salaryCurrency: null }),
+    ).toBeNull();
+  });
+
   it("returns null when no salary is stated", () => {
     expect(
       salaryRange({ salaryMin: null, salaryMax: null, salaryCurrency: null }),

@@ -24,6 +24,14 @@ const schema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
 
+  // Adzuna job search (optional aggregator). Both or neither.
+  ADZUNA_APP_ID: z.string().optional(),
+  ADZUNA_APP_KEY: z.string().optional(),
+
+  // Shared secret for the scheduled job sync. Vercel Cron sends it as a
+  // bearer token automatically when this variable is set on the project.
+  CRON_SECRET: z.string().min(16).optional(),
+
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("ELARA <onboarding@resend.dev>"),
 
@@ -40,6 +48,9 @@ function read() {
     GEMINI_API_KEY: emptyToUndefined(process.env.GEMINI_API_KEY),
     GOOGLE_CLIENT_ID: emptyToUndefined(process.env.GOOGLE_CLIENT_ID),
     GOOGLE_CLIENT_SECRET: emptyToUndefined(process.env.GOOGLE_CLIENT_SECRET),
+    ADZUNA_APP_ID: emptyToUndefined(process.env.ADZUNA_APP_ID),
+    ADZUNA_APP_KEY: emptyToUndefined(process.env.ADZUNA_APP_KEY),
+    CRON_SECRET: emptyToUndefined(process.env.CRON_SECRET),
     RESEND_API_KEY: emptyToUndefined(process.env.RESEND_API_KEY),
     EMAIL_FROM: emptyToUndefined(process.env.EMAIL_FROM),
     NODE_ENV: process.env.NODE_ENV,

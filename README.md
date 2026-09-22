@@ -64,7 +64,8 @@ printed in the terminal.
 | `npm run db:push`     | Sync the schema (local development)           |
 | `npm run db:migrate`  | Apply pending migrations (`migrate deploy`)   |
 | `npm run db:status`   | Show migration status                         |
-| `npm run db:seed`     | Seed jobs and the demo account                |
+| `npm run db:seed`     | Local only: demo account + sample jobs        |
+| `npm run jobs:sync`   | Pull live jobs from every enabled source      |
 | `npm run db:reset`    | Wipe, re-create and re-seed                   |
 | `npm run db:studio`   | Prisma Studio                                 |
 
@@ -85,6 +86,24 @@ printed in the terminal.
 3. Redeploy, then open `/api/health` — it reports whether the deployment can
    reach the database and its tables. Failures are logged with a Prisma error
    code and a hint in the Vercel function logs.
+
+**Live jobs.** Job discovery shows only real postings, read from companies'
+own job boards through official public APIs — Ashby, Greenhouse and Lever —
+plus Adzuna when its credentials are set. Nothing is scraped, and sample jobs
+are never shown. Pages never call a provider: a sync writes to the `Job` table
+and pages read it.
+
+- Sources are rows in `JobSource` (provider + board token / Lever site). The
+  starting set is in `src/server/jobs/sources.ts`; add a company by inserting
+  a row (for example with `npm run db:studio`), no deploy needed.
+- `vercel.json` runs `/api/cron/sync-jobs` daily (Vercel Cron, authenticated
+  with `CRON_SECRET`). Fill a fresh database once with `npm run jobs:sync`.
+- A posting that disappears from its board is marked closed, not deleted, so
+  saved jobs and applications keep their reference. Anything unconfirmed for
+  14 days is hidden.
+- ELARA never submits applications. It prepares the resume, cover letter and
+  answers; the person applies on the official page. The provider contract has
+  a `submitApplication` hook for a future authorised ATS integration.
 
 **Function region.** `vercel.json` pins functions to `bom1` (Mumbai), the
 same AWS region as the Supabase database (`ap-south-1`). Vercel's default,

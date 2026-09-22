@@ -1,4 +1,4 @@
-import type { ApplicationStatus } from "@prisma/client";
+import type { ApplicationMethod, ApplicationStatus } from "@prisma/client";
 
 import type { BadgeTone } from "@/components/ui/badge";
 
@@ -16,7 +16,25 @@ export type BoardApplication = {
   nextEventLabel: string | null;
   updatedAt: Date;
   noteCount: number;
-  job: { id: string; title: string; company: string } | null;
+  method: ApplicationMethod;
+  /** Job provider ("greenhouse", …) when the application came from a listing. */
+  provider: string | null;
+  preparedAt: Date | null;
+  hasCoverLetter: boolean;
+  resume: { id: string; title: string } | null;
+  job: {
+    id: string;
+    title: string;
+    company: string;
+    isActive: boolean;
+    source: string;
+  } | null;
+};
+
+export const METHOD_LABEL: Record<ApplicationMethod, string> = {
+  EXTERNAL_LINK: "Applied on the official site",
+  ASSISTED: "Prepared in ELARA, applied on the official site",
+  ATS: "Submitted through the employer's system",
 };
 
 /**
@@ -25,6 +43,7 @@ export type BoardApplication = {
  */
 export const STATUS_TONE: Record<ApplicationStatus, BadgeTone> = {
   SAVED: "neutral",
+  PREPARED: "outline",
   APPLIED: "cobalt",
   SCREENING: "info",
   ASSESSMENT: "warning",
@@ -35,6 +54,7 @@ export const STATUS_TONE: Record<ApplicationStatus, BadgeTone> = {
 
 export const STATUS_ORDER: ApplicationStatus[] = [
   "SAVED",
+  "PREPARED",
   "APPLIED",
   "SCREENING",
   "ASSESSMENT",
@@ -45,6 +65,7 @@ export const STATUS_ORDER: ApplicationStatus[] = [
 
 export const STATUS_LABEL: Record<ApplicationStatus, string> = {
   SAVED: "Saved",
+  PREPARED: "Prepared",
   APPLIED: "Applied",
   SCREENING: "Screening",
   ASSESSMENT: "Assessment",

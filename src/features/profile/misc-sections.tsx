@@ -123,7 +123,7 @@ export function LinksSection({ items }: { items: ProfileLink[] }) {
   return (
     <ProfileSection
       id="links"
-      index="02"
+      index="03"
       title="Links"
       count={items.length}
       description="A portfolio, a repository, writing — anything you want a reader to open."
@@ -242,7 +242,7 @@ export function CertificationsSection({ items }: { items: Certification[] }) {
   return (
     <ProfileSection
       id="certifications"
-      index="06"
+      index="07"
       title="Certifications"
       count={items.length}
       description="Formal credentials with an issuer behind them."
@@ -338,7 +338,7 @@ export function LanguagesSection({ items }: { items: Language[] }) {
   return (
     <ProfileSection
       id="languages"
-      index="07"
+      index="08"
       title="Languages"
       count={items.length}
       action={
@@ -428,7 +428,7 @@ export function AchievementsSection({ items }: { items: Achievement[] }) {
   return (
     <ProfileSection
       id="achievements"
-      index="08"
+      index="09"
       title="Achievements"
       count={items.length}
       description="Awards, talks, publications — anything that is evidence but is not a job."

@@ -13,6 +13,7 @@ import { PageHeader, PageShell } from "@/features/workspace/page-header";
 import { CompletionChecklist } from "@/features/dashboard/completion-panel";
 import { ProfileReview } from "@/features/ai/profile-review";
 import { BasicsForm } from "@/features/profile/basics-form";
+import { PreferencesForm } from "@/features/profile/preferences-form";
 import { ProfileSection } from "@/features/profile/section";
 import { ExperienceSection } from "@/features/profile/experience-section";
 import { EducationSection } from "@/features/profile/education-section";
@@ -32,6 +33,7 @@ export const maxDuration = 60;
 
 const JUMP_LINKS = [
   { href: "#basics", label: "Details" },
+  { href: "#preferences", label: "Job preferences" },
   { href: "#links", label: "Links" },
   { href: "#experience", label: "Experience" },
   { href: "#education", label: "Education" },
@@ -97,6 +99,24 @@ export default async function ProfilePage() {
                 phone: data.phone,
                 website: data.website,
                 openToWork: data.openToWork,
+              }}
+            />
+          </ProfileSection>
+
+          <ProfileSection
+            id="preferences"
+            index="02"
+            title="Job preferences"
+            description="What you are looking for. Job recommendations follow these, and explain themselves against them."
+          >
+            <PreferencesForm
+              preferences={{
+                targetRoles: data.targetRoles,
+                preferredLocations: data.preferredLocations,
+                preferredLocationTypes: data.preferredLocationTypes,
+                preferredEmploymentTypes: data.preferredEmploymentTypes,
+                desiredSalaryMin: data.desiredSalaryMin,
+                desiredSalaryCurrency: data.desiredSalaryCurrency,
               }}
             />
           </ProfileSection>

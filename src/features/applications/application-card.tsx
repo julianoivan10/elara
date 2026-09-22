@@ -68,6 +68,16 @@ export function ApplicationCard({
             <p className="mt-1 text-[0.8125rem] leading-tight text-ink-muted">
               {application.role}
             </p>
+            {application.resume ? (
+              <p className="mt-1.5 truncate text-[0.6875rem] text-ink-faint">
+                Resume: {application.resume.title}
+              </p>
+            ) : null}
+            {application.job && !application.job.isActive ? (
+              <p className="mt-1 text-[0.6875rem] text-warning">
+                Listing closed
+              </p>
+            ) : null}
           </button>
 
           {showStatus ? (

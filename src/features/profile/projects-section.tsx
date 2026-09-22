@@ -195,7 +195,7 @@ export function ProjectsSection({
   return (
     <ProfileSection
       id="projects"
-      index="09"
+      index="10"
       title="Projects"
       count={items.length}
       description="Work you can point at. Managed in full under Projects."

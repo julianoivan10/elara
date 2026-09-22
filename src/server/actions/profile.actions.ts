@@ -15,6 +15,7 @@ import {
   experienceSchema,
   languageSchema,
   linkSchema,
+  preferencesSchema,
   projectSchema,
   skillSchema,
 } from "@/lib/validation/profile";
@@ -125,6 +126,34 @@ export async function saveBasicsAction(
     return ok("Saved.");
   } catch (error) {
     return unexpected(error, "saveBasicsAction");
+  }
+}
+
+/* -------------------------------------------------------- job preferences */
+
+export async function savePreferencesAction(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const { profileId } = await requireProfile();
+
+  const parsed = preferencesSchema.safeParse({
+    targetRoles: formData.get("targetRoles") ?? "",
+    preferredLocations: formData.get("preferredLocations") ?? "",
+    preferredLocationTypes: formData.getAll("preferredLocationTypes"),
+    preferredEmploymentTypes: formData.getAll("preferredEmploymentTypes"),
+    desiredSalaryMin: formData.get("desiredSalaryMin") ?? "",
+    desiredSalaryCurrency: formData.get("desiredSalaryCurrency") ?? "",
+  });
+  if (!parsed.success) return fromZod(parsed.error);
+
+  try {
+    await db.profile.update({ where: { id: profileId }, data: parsed.data });
+    refresh("/profile");
+    refresh("/jobs");
+    return ok("Preferences saved. Recommendations now follow them.");
+  } catch (error) {
+    return unexpected(error, "savePreferencesAction");
   }
 }
 

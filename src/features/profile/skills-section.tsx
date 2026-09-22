@@ -46,7 +46,7 @@ export function SkillsSection({
   return (
     <ProfileSection
       id="skills"
-      index="05"
+      index="06"
       title="Skills"
       count={items.length}
       description="What job filters and keyword scans look for. Group them so they read well on a resume."

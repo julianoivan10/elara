@@ -32,6 +32,7 @@ export const dynamic = "force-dynamic";
 
 const STATUS_TONE = {
   SAVED: "neutral",
+  PREPARED: "outline",
   APPLIED: "cobalt",
   SCREENING: "info",
   ASSESSMENT: "warning",

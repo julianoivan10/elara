@@ -1,8 +1,12 @@
 import "server-only";
-import type { ApplicationStatus } from "@prisma/client";
+import type { ApplicationStatus, Prisma } from "@prisma/client";
 
 import { db } from "@/server/db";
 import { AuthorizationError, NotFoundError } from "@/server/auth/guards";
+import { isProviderKey, PROVIDER_LABEL } from "@/lib/jobs/types";
+import { ResumeService } from "@/services/resume.service";
+
+export type PreparedAnswer = { question: string; answer: string };
 
 /**
  * ApplicationService: the tracker.
@@ -18,6 +22,7 @@ export const APPLICATION_STATUSES: {
   terminal?: boolean;
 }[] = [
   { value: "SAVED", label: "Saved", tone: "neutral" },
+  { value: "PREPARED", label: "Prepared", tone: "outline" },
   { value: "APPLIED", label: "Applied", tone: "cobalt" },
   { value: "SCREENING", label: "Screening", tone: "info" },
   { value: "ASSESSMENT", label: "Assessment", tone: "warning" },
@@ -28,6 +33,7 @@ export const APPLICATION_STATUSES: {
 
 export const ACTIVE_STATUSES: ApplicationStatus[] = [
   "SAVED",
+  "PREPARED",
   "APPLIED",
   "SCREENING",
   "ASSESSMENT",
@@ -41,7 +47,16 @@ export const ApplicationService = {
       where: { userId },
       orderBy: [{ sortIndex: "asc" }, { updatedAt: "desc" }],
       include: {
-        job: { select: { id: true, title: true, company: true } },
+        job: {
+          select: {
+            id: true,
+            title: true,
+            company: true,
+            isActive: true,
+            source: true,
+          },
+        },
+        resume: { select: { id: true, title: true } },
         _count: { select: { notes: true } },
       },
     });
@@ -81,6 +96,7 @@ export const ApplicationService = {
       status?: ApplicationStatus;
       jobId?: string | null;
       appliedAt?: Date | null;
+      provider?: string | null;
     },
   ) {
     const status = input.status ?? "SAVED";
@@ -95,6 +111,7 @@ export const ApplicationService = {
         source: input.source ?? null,
         status,
         jobId: input.jobId ?? null,
+        provider: input.provider ?? null,
         appliedAt:
           input.appliedAt ?? (status === "APPLIED" ? new Date() : null),
         events: { create: { toStatus: status } },
@@ -107,14 +124,15 @@ export const ApplicationService = {
 
   /** Create from a job posting, without retyping what we already know. */
   async createFromJob(userId: string, jobId: string) {
-    const job = await db.job.findUnique({
-      where: { id: jobId },
+    const job = await db.job.findFirst({
+      where: { id: jobId, isDemo: false },
       select: {
         id: true,
         title: true,
         company: true,
         location: true,
         applyUrl: true,
+        source: true,
       },
     });
     if (!job) throw new NotFoundError("That job is no longer listed.");
@@ -130,10 +148,158 @@ export const ApplicationService = {
       role: job.title,
       location: job.location,
       url: job.applyUrl,
-      source: "ELARA",
+      source: isProviderKey(job.source)
+        ? PROVIDER_LABEL[job.source]
+        : job.source,
+      provider: job.source,
       jobId: job.id,
       status: "SAVED",
     });
+  },
+
+  /**
+   * Save the prepared materials for a job: which resume, an optional cover
+   * letter, optional answers. Moves a saved application to "prepared" (with a
+   * history event). Nothing is sent anywhere — the person applies on the
+   * official page themselves.
+   */
+  async prepare(
+    userId: string,
+    jobId: string,
+    input: {
+      resumeId: string | null;
+      coverLetter: string | null;
+      answers: PreparedAnswer[];
+    },
+  ) {
+    const job = await db.job.findFirst({
+      where: { id: jobId, isDemo: false },
+      select: {
+        id: true,
+        title: true,
+        company: true,
+        location: true,
+        applyUrl: true,
+        source: true,
+      },
+    });
+    if (!job) throw new NotFoundError("That job is no longer listed.");
+
+    if (input.resumeId) {
+      const owned = await db.resume.findFirst({
+        where: { id: input.resumeId, userId },
+        select: { id: true },
+      });
+      if (!owned) throw new AuthorizationError("That resume is not yours.");
+    }
+
+    const materials = {
+      resumeId: input.resumeId,
+      coverLetter: input.coverLetter,
+      answers: input.answers as unknown as Prisma.InputJsonValue,
+      preparedAt: new Date(),
+      method: "ASSISTED" as const,
+      provider: job.source,
+    };
+
+    const existing = await db.application.findFirst({
+      where: { userId, jobId },
+      select: { id: true, status: true },
+    });
+
+    if (existing) {
+      const promote = existing.status === "SAVED";
+      await db.$transaction([
+        db.application.update({
+          where: { id: existing.id },
+          data: {
+            ...materials,
+            ...(promote ? { status: "PREPARED" as const } : {}),
+          },
+        }),
+        ...(promote
+          ? [
+              db.applicationEvent.create({
+                data: {
+                  applicationId: existing.id,
+                  fromStatus: "SAVED",
+                  toStatus: "PREPARED",
+                },
+              }),
+            ]
+          : []),
+      ]);
+      return { id: existing.id };
+    }
+
+    return db.application.create({
+      data: {
+        userId,
+        jobId: job.id,
+        company: job.company,
+        role: job.title,
+        location: job.location,
+        url: job.applyUrl,
+        source: isProviderKey(job.source)
+          ? PROVIDER_LABEL[job.source]
+          : job.source,
+        status: "PREPARED",
+        ...materials,
+        events: { create: { toStatus: "PREPARED" } },
+      },
+      select: { id: true },
+    });
+  },
+
+  /**
+   * The person says they applied on the official page. Records the date and a
+   * snapshot of the resume they used, so later edits to the resume or profile
+   * cannot rewrite what was actually sent.
+   */
+  async markApplied(userId: string, applicationId: string) {
+    const current = await db.application.findFirst({
+      where: { id: applicationId, userId },
+      select: {
+        id: true,
+        status: true,
+        resumeId: true,
+        preparedAt: true,
+        appliedAt: true,
+      },
+    });
+    if (!current) throw new NotFoundError("That application is gone.");
+
+    const snapshot = current.resumeId
+      ? await ResumeService.buildDocument(userId, current.resumeId).catch(
+          () => null,
+        )
+      : null;
+
+    const advance = current.status === "SAVED" || current.status === "PREPARED";
+    await db.$transaction([
+      db.application.update({
+        where: { id: current.id },
+        data: {
+          ...(advance ? { status: "APPLIED" as const } : {}),
+          appliedAt: current.appliedAt ?? new Date(),
+          method: current.preparedAt ? "ASSISTED" : "EXTERNAL_LINK",
+          ...(snapshot
+            ? { resumeSnapshot: snapshot as unknown as Prisma.InputJsonValue }
+            : {}),
+        },
+      }),
+      ...(advance
+        ? [
+            db.applicationEvent.create({
+              data: {
+                applicationId: current.id,
+                fromStatus: current.status,
+                toStatus: "APPLIED",
+              },
+            }),
+          ]
+        : []),
+    ]);
   },
 
   async setStatus(

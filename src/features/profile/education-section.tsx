@@ -32,7 +32,7 @@ export function EducationSection({ items }: { items: Education[] }) {
   return (
     <ProfileSection
       id="education"
-      index="04"
+      index="05"
       title="Education"
       count={items.length}
       description="Degrees, diplomas and courses. Include anything still in progress."

@@ -139,18 +139,29 @@ export const ResumeService = {
     });
   },
 
-  async duplicate(userId: string, resumeId: string) {
+  /**
+   * Copy a resume. With `overrides`, the copy can be retitled and aimed at a
+   * job — how a tailored resume starts from one the person already shaped.
+   */
+  async duplicate(
+    userId: string,
+    resumeId: string,
+    overrides: { title?: string; targetJobId?: string | null } = {},
+  ) {
     const source = await ResumeService.get(userId, resumeId);
 
     return db.resume.create({
       data: {
         userId,
-        title: `${source.title} (copy)`,
+        title: overrides.title ?? `${source.title} (copy)`,
         templateKey: source.templateKey,
         accentKey: source.accentKey,
         fontKey: source.fontKey,
         density: source.density,
-        targetJobId: source.targetJobId,
+        targetJobId:
+          overrides.targetJobId !== undefined
+            ? overrides.targetJobId
+            : source.targetJobId,
         sections: {
           create: source.sections.map((section) => ({
             kind: section.kind,

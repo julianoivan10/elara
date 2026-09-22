@@ -1,19 +1,20 @@
 /**
  * ELARA seed data.
  *
+ * LOCAL DEVELOPMENT ONLY. Never run this against a production database.
+ *
  * Two things live here, and they are kept distinct:
  *
- *   1. The job catalogue — invented companies and postings written the way real
- *      ones read. Every row is flagged `isDemo`, so demo listings can be told
- *      apart from anything imported later.
+ *   1. A sample job catalogue — invented companies and postings. Every row is
+ *      flagged `isDemo`, and job discovery never shows demo rows: live jobs
+ *      come only from real providers (`npm run jobs:sync`). The samples exist
+ *      so the demo account's saved jobs and applications have something to
+ *      point at.
  *   2. One demo account with a complete career profile, so the workspace can be
  *      seen full rather than empty. Ordinary accounts are untouched by this.
  *
  * Re-runnable: jobs upsert on (source, externalId) and the demo user upserts on
  * email, so `npm run db:seed` twice is the same as running it once.
- *
- * `npm run db:seed -- --jobs-only` loads the catalogue alone. Use that against a
- * production database: the demo account's password is published in the README.
  */
 import {
   PrismaClient,
@@ -1017,12 +1018,6 @@ async function main() {
   console.info("\nSeeding ELARA\n");
 
   await seedJobs();
-
-  if (process.argv.includes("--jobs-only")) {
-    console.info("\n  --jobs-only: demo account skipped\n");
-    return;
-  }
-
   const { userId } = await seedDemoAccount();
   await seedDemoWorkspace(userId);
 

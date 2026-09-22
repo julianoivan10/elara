@@ -6,6 +6,7 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { humanizeEnum } from "@/lib/format";
+import { isProviderKey, PROVIDER_LABEL } from "@/lib/jobs/types";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/editorial";
 
@@ -24,13 +25,35 @@ const EMPLOYMENT_TYPES = [
   "INTERNSHIP",
   "FREELANCE",
 ] as const;
-const SENIORITIES = ["INTERNSHIP", "ENTRY", "MID", "SENIOR", "LEAD"] as const;
+const SENIORITIES = ["INTERNSHIP", "ENTRY", "SENIOR", "LEAD"] as const;
+const POSTED = [
+  { value: "1", label: "Past day" },
+  { value: "7", label: "Past week" },
+  { value: "30", label: "Past month" },
+] as const;
+
+const FILTER_KEYS = [
+  "location",
+  "remote",
+  "type",
+  "seniority",
+  "skill",
+  "source",
+  "posted",
+  "salary",
+  "currency",
+  "minSalary",
+] as const;
 
 export function JobFilters({
   skills,
+  sources,
+  currencies,
   total,
 }: {
   skills: { name: string; count: number }[];
+  sources: { source: string; count: number }[];
+  currencies: { currency: string; count: number }[];
   total: number;
 }) {
   const router = useRouter();
@@ -54,14 +77,7 @@ export function JobFilters({
     [params, pathname, router],
   );
 
-  const activeCount = [
-    "location",
-    "remote",
-    "type",
-    "seniority",
-    "skill",
-    "minSalary",
-  ].filter((key) => params.get(key)).length;
+  const activeCount = FILTER_KEYS.filter((key) => params.get(key)).length;
 
   const toggle = (key: string, value: string) =>
     apply({ [key]: params.get(key) === value ? null : value });
@@ -75,7 +91,7 @@ export function JobFilters({
             active={params.get("remote") === value}
             onClick={() => toggle("remote", value)}
           >
-            {humanizeEnum(value)}
+            {value === "ONSITE" ? "On-site" : humanizeEnum(value)}
           </Chip>
         ))}
       </FilterGroup>
@@ -120,6 +136,44 @@ export function JobFilters({
         />
       </div>
 
+      <FilterGroup label="Posted">
+        {POSTED.map((option) => (
+          <Chip
+            key={option.value}
+            active={params.get("posted") === option.value}
+            onClick={() => toggle("posted", option.value)}
+          >
+            {option.label}
+          </Chip>
+        ))}
+      </FilterGroup>
+
+      <SalaryFilter
+        key={`${params.get("currency") ?? ""}|${params.get("minSalary") ?? ""}`}
+        currencies={currencies}
+        currency={params.get("currency")}
+        minSalary={params.get("minSalary")}
+        disclosed={params.get("salary") === "disclosed"}
+        apply={apply}
+      />
+
+      {sources.length > 1 ? (
+        <FilterGroup label="Source">
+          {sources.map((s) => (
+            <Chip
+              key={s.source}
+              active={params.get("source") === s.source}
+              onClick={() => toggle("source", s.source)}
+            >
+              {isProviderKey(s.source) ? PROVIDER_LABEL[s.source] : s.source}
+              <span data-numeric className="ml-1 text-[0.625rem] opacity-60">
+                {s.count}
+              </span>
+            </Chip>
+          ))}
+        </FilterGroup>
+      ) : null}
+
       <FilterGroup label="Asks for">
         {skills.slice(0, 14).map((skill) => (
           <Chip
@@ -141,14 +195,7 @@ export function JobFilters({
           size="sm"
           className="self-start"
           onClick={() =>
-            apply({
-              location: null,
-              remote: null,
-              type: null,
-              seniority: null,
-              skill: null,
-              minSalary: null,
-            })
+            apply(Object.fromEntries(FILTER_KEYS.map((key) => [key, null])))
           }
         >
           <X />
@@ -247,6 +294,96 @@ function SearchBox({
         Search
       </Button>
     </form>
+  );
+}
+
+/**
+ * Pay is compared within one currency only — a minimum in dollars says
+ * nothing about a posting in ringgit — so a minimum needs a currency, and only
+ * currencies that live postings actually use are offered.
+ */
+function SalaryFilter({
+  currencies,
+  currency,
+  minSalary,
+  disclosed,
+  apply,
+}: {
+  currencies: { currency: string; count: number }[];
+  currency: string | null;
+  minSalary: string | null;
+  disclosed: boolean;
+  apply: (changes: Record<string, string | null>) => void;
+}) {
+  const [cur, setCur] = React.useState(
+    currency ?? currencies[0]?.currency ?? "",
+  );
+  const [amount, setAmount] = React.useState(minSalary ?? "");
+
+  if (currencies.length === 0) return null;
+
+  return (
+    <fieldset className="flex flex-col gap-2.5">
+      <legend className="eyebrow mb-0.5">Pay</legend>
+      <label className="flex items-center gap-2 text-[0.8125rem] text-ink">
+        <input
+          type="checkbox"
+          checked={disclosed}
+          onChange={(event) =>
+            apply({ salary: event.target.checked ? "disclosed" : null })
+          }
+          className="size-4 accent-[var(--color-ink)]"
+        />
+        Only postings that state pay
+      </label>
+      <form
+        className="flex items-end gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const value = amount.replace(/[^\d]/g, "");
+          // A currency alone narrows to postings paying in it; with an
+          // amount it is the unit of the minimum.
+          apply({ currency: cur || null, minSalary: value || null });
+        }}
+      >
+        <label className="flex flex-col gap-1">
+          <span className="sr-only">Currency</span>
+          <select
+            value={cur}
+            onChange={(event) => setCur(event.target.value)}
+            className="h-8 rounded-none border-0 border-b border-rule bg-transparent text-[0.8125rem] text-ink outline-none focus:border-cobalt"
+          >
+            {currencies.map((c) => (
+              <option key={c.currency} value={c.currency}>
+                {c.currency} ({c.count})
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="sr-only">Minimum yearly pay</span>
+          <input
+            inputMode="numeric"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder="Min per year"
+            className="h-8 w-full min-w-0 rounded-none border-0 border-b border-rule bg-transparent text-[0.8125rem] text-ink outline-none placeholder:text-ink-ghost focus:border-cobalt"
+          />
+        </label>
+        <Button type="submit" size="sm" variant="subtle">
+          Set
+        </Button>
+      </form>
+      {currency ? (
+        <button
+          type="button"
+          onClick={() => apply({ currency: null, minSalary: null })}
+          className="self-start text-[0.75rem] text-ink-muted underline underline-offset-4 hover:text-ink"
+        >
+          Any pay
+        </button>
+      ) : null}
+    </fieldset>
   );
 }
 

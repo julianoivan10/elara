@@ -34,6 +34,11 @@ export default async function ApplicationsPage() {
     nextEventLabel: application.nextEventLabel,
     updatedAt: application.updatedAt,
     noteCount: application._count.notes,
+    method: application.method,
+    provider: application.provider,
+    preparedAt: application.preparedAt,
+    hasCoverLetter: Boolean(application.coverLetter),
+    resume: application.resume,
     job: application.job,
   }));
 

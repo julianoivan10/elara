@@ -106,21 +106,30 @@ export async function createResumeAction(
  * job into the resume's content — it only records what the resume is aimed at,
  * so the editor can show what the posting asks for beside your own wording.
  */
-export async function createTailoredResumeAction(jobId: string) {
+export async function createTailoredResumeAction(
+  jobId: string,
+  /** Start from one of the person's resumes instead of a fresh layout. */
+  baseResumeId?: string | null,
+) {
   const user = await requireUser();
 
-  const job = await db.job.findUnique({
-    where: { id: jobId },
+  const job = await db.job.findFirst({
+    where: { id: jobId, isDemo: false },
     select: { id: true, title: true, company: true },
   });
   if (!job) return fail("That job is no longer listed.");
 
   let id: string;
   try {
-    const resume = await ResumeService.create(user.id, {
-      title: `${job.title} — ${job.company}`,
-      targetJobId: job.id,
-    });
+    const title = `${job.title} — ${job.company}`.slice(0, 120);
+    // duplicate() reads the base through ResumeService.get, which enforces
+    // ownership: another user's resume id fails as not found.
+    const resume = baseResumeId
+      ? await ResumeService.duplicate(user.id, baseResumeId, {
+          title,
+          targetJobId: job.id,
+        })
+      : await ResumeService.create(user.id, { title, targetJobId: job.id });
     id = resume.id;
   } catch (error) {
     return handle(error, "createTailoredResumeAction");

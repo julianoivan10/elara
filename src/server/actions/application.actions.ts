@@ -14,6 +14,7 @@ import { unexpected } from "@/server/actions/unexpected";
 
 const STATUSES = [
   "SAVED",
+  "PREPARED",
   "APPLIED",
   "SCREENING",
   "ASSESSMENT",

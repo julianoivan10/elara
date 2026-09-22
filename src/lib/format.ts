@@ -105,9 +105,11 @@ const PERIOD_SUFFIX = { HOUR: "/hr", MONTH: "/mo", YEAR: "/yr" } as const;
 
 export function salaryRange(job: SalaryInput) {
   const { salaryMin, salaryMax, salaryCurrency, salaryPeriod } = job;
-  if (!salaryMin && !salaryMax) return null;
+  // A figure without a currency is not shown: guessing one would misstate
+  // the pay by a factor of thousands for some postings.
+  if ((!salaryMin && !salaryMax) || !salaryCurrency) return null;
 
-  const currency = salaryCurrency ?? "USD";
+  const currency = salaryCurrency;
   const format = (n: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -124,7 +126,8 @@ export function salaryRange(job: SalaryInput) {
 }
 
 /** "Posted today" / "Posted 3 days ago" — job listings read better this way. */
-export function postedLabel(value: Date | string) {
+export function postedLabel(value: Date | string | null | undefined) {
+  if (!value) return null;
   const date = typeof value === "string" ? new Date(value) : value;
   const days = Math.floor((Date.now() - date.getTime()) / 86_400_000);
   if (days <= 0) return "Today";

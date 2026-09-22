@@ -9,23 +9,33 @@ import { cn } from "@/lib/cn";
 import { humanizeEnum, postedLabel, salaryRange } from "@/lib/format";
 import { useToast } from "@/components/ui/toast";
 import { toggleSavedJobAction } from "@/server/actions/job.actions";
+import { CompanyMark, SourceLabel } from "@/features/jobs/job-source";
 
 export type JobSummary = {
   id: string;
   title: string;
   company: string;
   location: string;
-  locationType: string;
-  employmentType: string;
-  seniority: string;
+  locations: string[];
+  locationType: string | null;
+  employmentType: string | null;
+  seniority: string | null;
   salaryMin: number | null;
   salaryMax: number | null;
   salaryCurrency: string | null;
   salaryPeriod: "HOUR" | "MONTH" | "YEAR" | null;
   summary: string;
   skills: string[];
-  postedAt: Date;
+  postedAt: Date | null;
+  source: string;
   saved: boolean;
+};
+
+/** A short, evidence-based reason, shown on recommended cards. */
+export type CardMatch = {
+  roleFit: string | null;
+  strengths: string[];
+  gaps: string[];
 };
 
 /**
@@ -38,15 +48,26 @@ export type JobSummary = {
 export function JobCard({
   job,
   matchedSkills,
+  match,
 }: {
   job: JobSummary;
   /** Lower-cased skill names from the viewer's profile. */
   matchedSkills?: Set<string>;
+  match?: CardMatch;
 }) {
   const salary = salaryRange(job);
+  const posted = postedLabel(job.postedAt);
+  const facts = [
+    job.locationType
+      ? humanizeEnum(job.locationType).replace("Onsite", "On-site")
+      : null,
+    job.employmentType ? humanizeEnum(job.employmentType) : null,
+  ].filter(Boolean) as string[];
+  const moreLocations = job.locations.length > 1 ? job.locations.length - 1 : 0;
 
   return (
-    <article className="group relative flex items-start gap-4 border-t border-rule py-5 last:border-b">
+    <article className="group relative flex items-start gap-3 border-t border-rule py-5 last:border-b sm:gap-4">
+      <CompanyMark company={job.company} className="mt-0.5 hidden sm:flex" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h3 className="text-[1.0625rem] font-medium tracking-[-0.015em] text-ink">
@@ -74,19 +95,28 @@ export function JobCard({
         <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem] text-ink-muted">
           <span className="font-medium text-ink">{job.company}</span>
           <Sep />
-          <span className="inline-flex items-center gap-1">
-            <MapPin className="size-3 text-ink-ghost" />
-            {job.location}
+          <span className="inline-flex min-w-0 items-center gap-1">
+            <MapPin className="size-3 shrink-0 text-ink-ghost" />
+            <span className="[overflow-wrap:anywhere]">{job.location}</span>
+            {moreLocations ? (
+              <span className="text-ink-faint">+{moreLocations}</span>
+            ) : null}
           </span>
-          <Sep />
-          <span>{humanizeEnum(job.locationType)}</span>
-          <Sep />
-          <span>{humanizeEnum(job.employmentType)}</span>
+          {facts.map((fact) => (
+            <React.Fragment key={fact}>
+              <Sep />
+              <span>{fact}</span>
+            </React.Fragment>
+          ))}
         </p>
 
-        <p className="mt-2.5 max-w-[68ch] text-[0.875rem] leading-relaxed text-ink-muted">
-          {job.summary}
-        </p>
+        {match ? (
+          <MatchLine match={match} />
+        ) : job.summary ? (
+          <p className="mt-2.5 line-clamp-2 max-w-[68ch] text-[0.875rem] leading-relaxed text-ink-muted">
+            {job.summary}
+          </p>
+        ) : null}
 
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           {job.skills.slice(0, 6).map((skill) => {
@@ -107,14 +137,34 @@ export function JobCard({
             );
           })}
 
-          <span className="eyebrow ml-auto shrink-0">
-            {postedLabel(job.postedAt)}
+          <span className="ml-auto flex shrink-0 items-center gap-3">
+            <SourceLabel source={job.source} />
+            {posted ? <span className="eyebrow">{posted}</span> : null}
           </span>
         </div>
       </div>
 
       <SaveButton jobId={job.id} title={job.title} initialSaved={job.saved} />
     </article>
+  );
+}
+
+function MatchLine({ match }: { match: CardMatch }) {
+  return (
+    <div className="mt-2.5 flex max-w-[68ch] flex-col gap-1 text-[0.8125rem] leading-relaxed">
+      {match.roleFit ? <p className="text-ink">{match.roleFit}</p> : null}
+      {match.strengths.length ? (
+        <p className="text-ink-muted">
+          <span className="text-[#4b6106]">You show </span>
+          {match.strengths.slice(0, 4).join(", ")}
+        </p>
+      ) : null}
+      {match.gaps.length ? (
+        <p className="text-ink-faint">
+          Not on your profile: {match.gaps.slice(0, 3).join(", ")}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

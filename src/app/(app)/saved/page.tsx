@@ -10,6 +10,7 @@ import { CareerService } from "@/services/career.service";
 import { JobService } from "@/services/job.service";
 import { PageHeader, PageShell } from "@/features/workspace/page-header";
 import { JobCard } from "@/features/jobs/job-card";
+import { RemoveClosedButton } from "@/features/jobs/remove-closed-button";
 
 export const metadata: Metadata = { title: "Saved jobs" };
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ export default async function SavedJobsPage() {
   const matched = new Set(
     profileSkills.map((skill) => skill.toLowerCase().trim()),
   );
+  const closed = saved.filter((row) => !row.live).length;
 
   return (
     <PageShell>
@@ -52,11 +54,23 @@ export default async function SavedJobsPage() {
         />
       ) : (
         <div className="flex flex-col">
-          {saved.map(({ job, createdAt }) => (
-            <div key={job.id}>
+          {closed > 0 ? (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-rule bg-raised/50 px-4 py-3">
+              <p className="text-[0.8125rem] text-ink-muted">
+                {closed} saved listing{closed === 1 ? " has" : "s have"} closed
+                since you saved {closed === 1 ? "it" : "them"}.
+              </p>
+              <RemoveClosedButton />
+            </div>
+          ) : null}
+          {saved.map(({ job, createdAt, live }) => (
+            <div key={job.id} className={live ? undefined : "opacity-70"}>
               <JobCard job={{ ...job, saved: true }} matchedSkills={matched} />
               <p className="eyebrow -mt-2 pb-4">
                 Saved {relativeTime(createdAt)}
+                {live ? null : (
+                  <span className="ml-2 text-warning">· No longer open</span>
+                )}
               </p>
             </div>
           ))}

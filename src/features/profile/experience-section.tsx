@@ -59,7 +59,7 @@ export function ExperienceSection({
   return (
     <ProfileSection
       id="experience"
-      index="03"
+      index="04"
       title="Experience"
       count={items.length}
       description="Roles, internships, freelance work and volunteering. What changed because you were there matters more than the job description."
